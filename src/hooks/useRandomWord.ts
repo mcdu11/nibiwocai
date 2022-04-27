@@ -39,5 +39,5 @@ export function useRandomWord() {
     return word;
   };
 
-  return { word, setWord, getRandomWord, libRecords, setLibRecords };
+  return { word, setWord, getRandomWord, libRecords, setLibRecords, setUsedWords };
 }

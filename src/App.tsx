@@ -16,8 +16,14 @@ function App() {
 
   const [showRecords, setShowRecords] = useState(false);
 
-  const { word, setWord, getRandomWord, libRecords, setLibRecords } =
-    useRandomWord();
+  const {
+    word,
+    setWord,
+    getRandomWord,
+    libRecords,
+    setLibRecords,
+    setUsedWords,
+  } = useRandomWord();
 
   useEffect(() => {
     if (count === 0) {
@@ -63,6 +69,11 @@ function App() {
 
   const clearRecord = () => {
     setLibRecords([]);
+  };
+
+  const recoverLib = () => {
+    setUsedWords([]);
+    window.location.reload();
   };
 
   const hasRecords = !!libRecords.length;
@@ -213,6 +224,15 @@ function App() {
         ) : (
           <div style={{ width: 250, padding: "20px" }}>暂无记录</div>
         )}
+        <Button
+          size="large"
+          variant="contained"
+          color="primary"
+          style={{ marginTop: 20, width: "50%", marginLeft: 20 }}
+          onClick={() => recoverLib()}
+        >
+          恢复词库
+        </Button>
       </Drawer>
     </div>
   );
