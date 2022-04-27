@@ -5,9 +5,6 @@ on:
   push:
     branches:
       - main
-  pullrequest:
-    branches:
-      - main
 # 任务
 jobs:
   build-and-deploy:
