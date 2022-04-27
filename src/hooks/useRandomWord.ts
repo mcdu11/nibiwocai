@@ -13,19 +13,26 @@ export function useRandomWord() {
     }>
   >("LIB_RECORDS", []);
 
+  const [usedWords, setUsedWords] = useLocalStorage<string[]>("USED_WORD", []);
+
   const getRandomWord = () => {
     // 可选择的 lib 列表
     const libAvailable = libCopy.filter(
-      (item) => !libRecords.some((a) => a.word === item)
+      (item) => !usedWords.some((a) => a === item)
     );
 
-    console.log(libAvailable);
+    // console.log(libAvailable);
     if (!libAvailable.length) {
       return;
     }
     const idx = Math.floor(Math.random() * libAvailable.length);
 
     const word = libAvailable[idx];
+
+    setUsedWords((pre) => {
+      pre.push(word);
+      return pre;
+    });
 
     // console.log(word);
 

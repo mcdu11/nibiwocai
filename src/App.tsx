@@ -1,9 +1,5 @@
 import { Button, Drawer, Grid, TextField } from "@material-ui/core";
-import {
-  ArrowForward,
-  Cancel,
-  CheckCircle
-} from "@material-ui/icons";
+import { ArrowForward, Cancel, CheckCircle } from "@material-ui/icons";
 import React, { useEffect, useState } from "react";
 import { useCountdown } from "usehooks-ts";
 import "./App.css";
@@ -182,9 +178,10 @@ function App() {
                 {libRecords?.filter((item) => item.pass === undefined)?.length}
               </div>
             </div>
-            {libRecords.map((record) => {
+            {libRecords.map((record, idx) => {
               return (
                 <div
+                  key={idx}
                   style={{
                     width: 250,
                     padding: "10px 20px",
