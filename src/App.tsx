@@ -39,6 +39,7 @@ function App() {
   const handleNext = () => {
     const w = getRandomWord();
     setWord(w);
+    reset();
   };
 
   const handleCorrect = () => {
