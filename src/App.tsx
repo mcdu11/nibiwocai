@@ -104,10 +104,11 @@ function App() {
 
         <Grid
           container
+          className="operation"
           spacing={3}
           style={{ flexGrow: 0, width: "100%", margin: 0 }}
         >
-          <Grid item xs={4}></Grid>
+          <Grid item xs={3}></Grid>
           <Grid item xs={4}>
             <div className="timer-ctrl">
               <Button
