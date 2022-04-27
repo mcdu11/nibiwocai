@@ -49,13 +49,13 @@ function App() {
   };
 
   const handleOpreate = (pass?: boolean) => {
-    if (!word) {
+    if (!word || count === 0) {
       return;
     }
     // 记录当前的 词条
     setLibRecords((pre) => {
       pre.push({
-        word: word,
+        word: word || '',
         pass,
       });
 
