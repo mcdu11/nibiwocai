@@ -1,20 +1,11 @@
+import { Button, Checkbox, Drawer, Grid, TextField } from "@material-ui/core";
 import React, { useEffect, useState } from "react";
-import logo from "./logo.svg";
+import { useCountdown } from "usehooks-ts";
 import "./App.css";
-import { useCountdown, useLocalStorage } from "usehooks-ts";
-import {
-  Button,
-  Checkbox,
-  Container,
-  Drawer,
-  Grid,
-  Paper,
-  TextField,
-} from "@material-ui/core";
 import { useRandomWord } from "./hooks/useRandomWord";
 
 function App() {
-  const [intervalValue, setIntervalValue] = useState<number>(1000);
+  const [intervalValue] = useState<number>(1000);
   const [seconds, setSeconds] = useState<number>(60);
   const [count, { start, stop, reset }] = useCountdown({
     seconds,
@@ -31,15 +22,18 @@ function App() {
     if (count === 0) {
       stop();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [count]);
 
   useEffect(() => {
     reset();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seconds]);
 
   useEffect(() => {
     const w = getRandomWord();
     setWord(w);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleNext = () => {
