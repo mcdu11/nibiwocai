@@ -14,14 +14,19 @@
 }
 
 .App-header {
-  background-color: #282c34;
+  /* background-color: #282c34; */
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* justify-content: center; */
   font-size: calc(10px + 2vmin);
-  color: white;
+  /* color: white; */
+  color: black;
+  /* background-image: url('./images/bg.PNG'); */
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center center;
 }
 
 .App-link {
@@ -35,4 +40,37 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+.header-count {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  width: 100%;
+  height: 100px;
+  flex: 0;
+}
+
+.header-count span {
+  font-size: 80px;
+}
+
+.main {
+  min-height: 400px;
+  font-size: 80px;
+  width: 100%;
+  padding-top: 40px;
+  flex: 1;
+}
+
+.operation {
+  display: flex;
+  flex: 0;
+  flex-basis: 60px;
+}
+
+.timer-ctrl,.word-ctrl {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
 }
