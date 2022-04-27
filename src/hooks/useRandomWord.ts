@@ -9,7 +9,7 @@ export function useRandomWord() {
   const [libRecords, setLibRecords] = useLocalStorage<
     Array<{
       word: string;
-      pass: boolean;
+      pass?: boolean;
     }>
   >("LIB_RECORDS", []);
 

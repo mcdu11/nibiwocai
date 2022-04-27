@@ -1,4 +1,9 @@
-import { Button, Checkbox, Drawer, Grid, TextField } from "@material-ui/core";
+import { Button, Drawer, Grid, TextField } from "@material-ui/core";
+import {
+  ArrowForward,
+  Cancel,
+  CheckCircle
+} from "@material-ui/icons";
 import React, { useEffect, useState } from "react";
 import { useCountdown } from "usehooks-ts";
 import "./App.css";
@@ -39,18 +44,17 @@ function App() {
   const handleNext = () => {
     const w = getRandomWord();
     setWord(w);
-    reset();
   };
 
-  const handleCorrect = () => {
+  const handleOpreate = (pass?: boolean) => {
     if (!word) {
       return;
     }
     // 记录当前的 词条
     setLibRecords((pre) => {
       pre.push({
-        word: word || "",
-        pass: true,
+        word: word,
+        pass,
       });
 
       return pre;
@@ -58,9 +62,14 @@ function App() {
 
     setTimeout(() => {
       handleNext();
-      reset();
     }, 10);
   };
+
+  const clearRecord = () => {
+    setLibRecords([]);
+  };
+
+  const hasRecords = !!libRecords.length;
 
   return (
     <div className="App">
@@ -94,13 +103,23 @@ function App() {
           <Grid item xs={4}></Grid>
           <Grid item xs={4}>
             <div className="timer-ctrl">
-              <Button variant="contained" color="primary" onClick={start}>
+              <Button
+                size="large"
+                variant="contained"
+                color="primary"
+                onClick={start}
+              >
                 开始
               </Button>
-              <Button variant="contained" onClick={stop}>
+              <Button
+                size="large"
+                variant="contained"
+                color="secondary"
+                onClick={stop}
+              >
                 暂停
               </Button>
-              <Button variant="contained" onClick={reset}>
+              <Button size="large" variant="contained" onClick={reset}>
                 重置
               </Button>
             </div>
@@ -108,18 +127,31 @@ function App() {
           <Grid item xs={4}>
             <div className="word-ctrl">
               <Button
+                size="large"
                 variant="contained"
                 color="primary"
-                onClick={handleCorrect}
+                onClick={() => handleOpreate(true)}
               >
                 正确
               </Button>
-              <Button variant="contained" onClick={handleNext}>
-                下一个
-              </Button>
               <Button
+                size="large"
                 variant="contained"
                 color="secondary"
+                onClick={() => handleOpreate(false)}
+              >
+                错误
+              </Button>
+              <Button
+                size="large"
+                variant="contained"
+                onClick={() => handleOpreate(undefined)}
+              >
+                跳过
+              </Button>
+              <Button
+                size="large"
+                variant="contained"
                 onClick={() => setShowRecords(true)}
               >
                 查看记录
@@ -135,18 +167,55 @@ function App() {
           setShowRecords(false);
         }}
       >
-        {libRecords.map((record) => {
-          return (
-            <div style={{ width: 250, padding: "0 20px" }}>
-              {record.word}:{" "}
-              <Checkbox
-                checked={record.pass}
-                color="primary"
-                inputProps={{ "aria-label": "secondary checkbox" }}
-              />
+        {hasRecords ? (
+          <>
+            <div style={{ marginLeft: 20 }}>
+              <div>
+                正确：{libRecords?.filter((item) => item.pass === true)?.length}
+              </div>
+              <div>
+                错误：
+                {libRecords?.filter((item) => item.pass === false)?.length}
+              </div>
+              <div>
+                跳过：
+                {libRecords?.filter((item) => item.pass === undefined)?.length}
+              </div>
             </div>
-          );
-        })}
+            {libRecords.map((record) => {
+              return (
+                <div
+                  style={{
+                    width: 250,
+                    padding: "10px 20px",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  <span style={{ display: "inline-block", width: "150px" }}>
+                    {record.word}:
+                  </span>
+                  {record.pass && <CheckCircle color="primary" />}
+                  {record.pass === false && <Cancel color="error" />}
+                  {record.pass === undefined && (
+                    <ArrowForward color="primary" />
+                  )}
+                </div>
+              );
+            })}
+            <Button
+              size="large"
+              variant="contained"
+              color="secondary"
+              style={{ width: "50%", marginLeft: 20 }}
+              onClick={() => clearRecord()}
+            >
+              清除记录
+            </Button>
+          </>
+        ) : (
+          <div style={{ width: 250, padding: "20px" }}>暂无记录</div>
+        )}
       </Drawer>
     </div>
   );
