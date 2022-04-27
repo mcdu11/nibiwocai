@@ -1,16 +1,16 @@
 {
   "files": {
-    "main.css": "/nibiwocai/static/css/main.70b5cb6e.css",
-    "main.js": "/nibiwocai/static/js/main.c67dbd52.js",
+    "main.css": "/nibiwocai/static/css/main.a929d8eb.css",
+    "main.js": "/nibiwocai/static/js/main.65483382.js",
     "static/js/787.fb500fde.chunk.js": "/nibiwocai/static/js/787.fb500fde.chunk.js",
     "static/media/game_bg.JPG": "/nibiwocai/static/media/game_bg.2808a23d7f9fcf2074f2.JPG",
     "index.html": "/nibiwocai/index.html",
-    "main.70b5cb6e.css.map": "/nibiwocai/static/css/main.70b5cb6e.css.map",
-    "main.c67dbd52.js.map": "/nibiwocai/static/js/main.c67dbd52.js.map",
+    "main.a929d8eb.css.map": "/nibiwocai/static/css/main.a929d8eb.css.map",
+    "main.65483382.js.map": "/nibiwocai/static/js/main.65483382.js.map",
     "787.fb500fde.chunk.js.map": "/nibiwocai/static/js/787.fb500fde.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.70b5cb6e.css",
-    "static/js/main.c67dbd52.js"
+    "static/css/main.a929d8eb.css",
+    "static/js/main.65483382.js"
   ]
 }
