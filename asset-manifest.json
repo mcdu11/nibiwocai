@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/nibiwocai/static/css/main.860968e4.css",
-    "main.js": "/nibiwocai/static/js/main.82fd38fd.js",
+    "main.css": "/nibiwocai/static/css/main.58ca6780.css",
+    "main.js": "/nibiwocai/static/js/main.7d2ae02c.js",
     "static/js/787.fb500fde.chunk.js": "/nibiwocai/static/js/787.fb500fde.chunk.js",
     "index.html": "/nibiwocai/index.html",
-    "main.860968e4.css.map": "/nibiwocai/static/css/main.860968e4.css.map",
-    "main.82fd38fd.js.map": "/nibiwocai/static/js/main.82fd38fd.js.map",
+    "main.58ca6780.css.map": "/nibiwocai/static/css/main.58ca6780.css.map",
+    "main.7d2ae02c.js.map": "/nibiwocai/static/js/main.7d2ae02c.js.map",
     "787.fb500fde.chunk.js.map": "/nibiwocai/static/js/787.fb500fde.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.860968e4.css",
-    "static/js/main.82fd38fd.js"
+    "static/css/main.58ca6780.css",
+    "static/js/main.7d2ae02c.js"
   ]
 }
