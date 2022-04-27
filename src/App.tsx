@@ -63,6 +63,7 @@ function App() {
 
     setTimeout(() => {
       handleNext();
+      reset();
     }, 10);
   };
 
