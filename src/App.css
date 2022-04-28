@@ -62,9 +62,8 @@
 
 .main {
   min-height: 300px;
-  font-size: 200px;
+  font-size: 160px;
   width: 100%;
-  padding-top: 20px;
   flex: 1;
 }
 
