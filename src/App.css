@@ -65,6 +65,8 @@
   font-size: 160px;
   width: 100%;
   flex: 1;
+  box-sizing: border-box;
+  padding: 0 10%;
 }
 
 .operation {

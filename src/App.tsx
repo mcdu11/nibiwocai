@@ -1,18 +1,42 @@
 import { Button, Drawer, Grid, TextField } from "@material-ui/core";
 import { ArrowForward, Cancel, CheckCircle } from "@material-ui/icons";
-import React, { useEffect, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useCountdown } from "usehooks-ts";
 import "./App.css";
 import { useRandomWord } from "./hooks/useRandomWord";
 
 function App() {
   const [intervalValue] = useState<number>(1000);
-  const [seconds, setSeconds] = useState<number>(60);
-  const [count, { start, stop, reset }] = useCountdown({
-    seconds,
-    interval: intervalValue,
-    isIncrement: false,
-  });
+  const [seconds, setSeconds] = useState<number>(180);
+  const [count, { start: originStart, stop: originStop, reset: originReset }] =
+    useCountdown({
+      seconds,
+      interval: intervalValue,
+      isIncrement: false,
+    });
+
+  const isCountingRef = useRef(false);
+
+  const start = () => {
+    originStart();
+    isCountingRef.current = true;
+  };
+
+  const stop = () => {
+    originStop();
+    isCountingRef.current = false;
+  };
+
+  const reset = () => {
+    originReset();
+    isCountingRef.current = false;
+  };
 
   const [showRecords, setShowRecords] = useState(false);
 
@@ -43,10 +67,19 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleNext = () => {
-    const w = getRandomWord();
-    setWord(w);
-  };
+  const handleKeyup = useCallback((e: KeyboardEvent) => {
+    e.preventDefault();
+    keyCallbackMap?.[e.key]?.();
+    // eslint-disable-next-line
+  }, []);
+
+  useEffect(() => {
+    document.addEventListener("keyup", handleKeyup);
+
+    return () => {
+      document.removeEventListener("keyup", handleKeyup);
+    };
+  }, [handleKeyup]);
 
   const handleOpreate = (pass?: boolean) => {
     if (!word || count === 0) {
@@ -55,7 +88,7 @@ function App() {
     // 记录当前的 词条
     setLibRecords((pre) => {
       pre.push({
-        word: word || '',
+        word: word || "",
         pass,
       });
 
@@ -65,6 +98,29 @@ function App() {
     setTimeout(() => {
       handleNext();
     }, 10);
+  };
+
+  const keyCallbackMap: { [index: string]: Function } = useMemo(() => {
+    return {
+      // 空格
+      " ": () => {
+        if (isCountingRef.current) {
+          stop();
+        } else {
+          start();
+        }
+      },
+      // 下箭头
+      ArrowDown: () => {
+        handleOpreate(undefined);
+      },
+    };
+    // eslint-disable-next-line
+  }, []);
+
+  const handleNext = () => {
+    const w = getRandomWord();
+    setWord(w);
   };
 
   const clearRecord = () => {
