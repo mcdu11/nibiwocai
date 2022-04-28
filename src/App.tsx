@@ -142,14 +142,14 @@ function App() {
               >
                 正确
               </Button>
-              <Button
+              {/* <Button
                 size="large"
                 variant="contained"
                 color="secondary"
                 onClick={() => handleOpreate(false)}
               >
                 错误
-              </Button>
+              </Button> */}
               <Button
                 size="large"
                 variant="contained"
@@ -181,10 +181,10 @@ function App() {
               <div>
                 正确：{libRecords?.filter((item) => item.pass === true)?.length}
               </div>
-              <div>
+              {/* <div>
                 错误：
                 {libRecords?.filter((item) => item.pass === false)?.length}
-              </div>
+              </div> */}
               <div>
                 跳过：
                 {libRecords?.filter((item) => item.pass === undefined)?.length}
