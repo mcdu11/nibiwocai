@@ -1,16 +1,16 @@
 {
   "files": {
-    "main.css": "/nibiwocai/static/css/main.446ce604.css",
-    "main.js": "/nibiwocai/static/js/main.65483382.js",
+    "main.css": "/nibiwocai/static/css/main.ff6288e6.css",
+    "main.js": "/nibiwocai/static/js/main.45bbe3f2.js",
     "static/js/787.fb500fde.chunk.js": "/nibiwocai/static/js/787.fb500fde.chunk.js",
     "static/media/game_bg1.JPG": "/nibiwocai/static/media/game_bg1.7f33080a606a24720638.JPG",
     "index.html": "/nibiwocai/index.html",
-    "main.446ce604.css.map": "/nibiwocai/static/css/main.446ce604.css.map",
-    "main.65483382.js.map": "/nibiwocai/static/js/main.65483382.js.map",
+    "main.ff6288e6.css.map": "/nibiwocai/static/css/main.ff6288e6.css.map",
+    "main.45bbe3f2.js.map": "/nibiwocai/static/js/main.45bbe3f2.js.map",
     "787.fb500fde.chunk.js.map": "/nibiwocai/static/js/787.fb500fde.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.446ce604.css",
-    "static/js/main.65483382.js"
+    "static/css/main.ff6288e6.css",
+    "static/js/main.45bbe3f2.js"
   ]
 }
