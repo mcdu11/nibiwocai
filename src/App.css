@@ -62,11 +62,27 @@
 
 .main {
   min-height: 300px;
-  font-size: 160px;
   width: 100%;
   flex: 1;
   box-sizing: border-box;
   padding: 0 10%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.main span {
+  font-weight: 600;
+  line-height: 1.1;
+  word-break: break-word;
+  text-align: center;
+}
+
+.remaining-hint {
+  margin-top: 16px;
+  font-size: 18px;
+  color: rgba(0, 0, 0, 0.5);
 }
 
 .operation {
@@ -78,10 +94,31 @@
 .timer-ctrl,
 .word-ctrl {
   display: flex;
-  /* justify-content: center; */
+  flex-wrap: wrap;
   gap: 10px;
 }
 
 .MuiButton-containedSizeLarge {
   font-size: 1.5rem !important;
+}
+
+.countdown-bar {
+  width: 100% !important;
+  height: 8px !important;
+}
+
+.count-low {
+  color: #d32f2f;
+  animation: count-pulse 1s ease-in-out infinite;
+}
+
+@keyframes count-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+.shortcut-hint {
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.55);
+  padding: 8px 0 16px;
 }
