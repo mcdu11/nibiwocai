@@ -1,12 +1,35 @@
-import { Button, Drawer, Grid, TextField } from "@material-ui/core";
-import { ArrowForward, Cancel, CheckCircle } from "@material-ui/icons";
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useCountdown } from "usehooks-ts";
+import {
+  Button,
+  Drawer,
+  Grid,
+  LinearProgress,
+  TextField,
+  TextareaAutosize,
+} from "@material-ui/core";
+import { ArrowForward, CheckCircle, Undo } from "@material-ui/icons";
+import React, { useCallback, useEffect, useRef } from "react";
+import { useCountdown, useLocalStorage } from "usehooks-ts";
 import "./App.css";
 import { useRandomWord } from "./hooks/useRandomWord";
 
+const MIN_SECONDS = 1;
+const MAX_SECONDS = 999;
+
+// Word card font size scales with character length and viewport (mobile-friendly).
+function fontSizeFor(len: number): string {
+  if (len <= 4) return "clamp(64px, 18vmin, 160px)";
+  if (len <= 6) return "clamp(54px, 14vmin, 130px)";
+  if (len <= 8) return "clamp(44px, 11vmin, 100px)";
+  if (len <= 12) return "clamp(34px, 9vmin, 76px)";
+  if (len <= 18) return "clamp(28px, 7vmin, 56px)";
+  return "clamp(22px, 6vmin, 42px)";
+}
+
 function App() {
-  const [seconds, setSeconds] = useState<number>(180);
+  const [seconds, setSeconds] = useLocalStorage<number>(
+    "COUNTDOWN_SECONDS",
+    180
+  );
   const [count, { start: originStart, stop: originStop, reset: originReset }] =
     useCountdown({
       seconds,
@@ -31,16 +54,24 @@ function App() {
     isCountingRef.current = false;
   }, [originReset]);
 
-  const [showRecords, setShowRecords] = useState(false);
+  const [showRecords, setShowRecords] = React.useState(false);
 
   const {
     word,
-    setWord,
-    getRandomWord,
-    resetWords,
+    remaining,
+    total,
+    canUndo,
+    isCustomLib,
+    next,
+    undo,
+    resetDeck,
+    applyCustomLib,
     libRecords,
-    setLibRecords,
+    clearRecords,
   } = useRandomWord();
+
+  const [customLibInput, setCustomLibInput] = React.useState("");
+  const [importMsg, setImportMsg] = React.useState<string>("");
 
   const playBeep = useCallback(() => {
     try {
@@ -60,11 +91,10 @@ function App() {
       osc.start();
       osc.stop(ctx.currentTime + 0.8);
     } catch {
-      // Audio is best-effort; ignore failures (e.g. blocked autoplay).
+      // best-effort; ignore failures (e.g. blocked autoplay)
     }
   }, []);
 
-  // Stop the timer and beep when the countdown reaches zero during a round.
   useEffect(() => {
     if (count === 0 && isCountingRef.current) {
       stop();
@@ -76,63 +106,90 @@ function App() {
     reset();
   }, [seconds, reset]);
 
-  useEffect(() => {
-    setWord(getRandomWord());
-  }, [getRandomWord, setWord]);
-
   const handleOperate = useCallback(
     (pass?: boolean) => {
-      if (!word || count === 0) {
-        return;
-      }
-      setLibRecords((pre) => [...pre, { word, pass }]);
-      setWord(getRandomWord());
+      if (!word || count === 0) return;
+      next(pass);
     },
-    [word, count, setLibRecords, setWord, getRandomWord]
+    [word, count, next]
   );
 
-  // Keep the latest handlers in refs so the global key listener (registered
-  // once) always invokes the freshest closures.
-  const toggleTimerRef = useRef<() => void>(() => {});
-  const nextWordRef = useRef<() => void>(() => {});
-  toggleTimerRef.current = () => {
-    if (isCountingRef.current) {
-      stop();
-    } else {
-      start();
-    }
+  const handleUndo = useCallback(() => {
+    if (!canUndo) return;
+    undo();
+  }, [canUndo, undo]);
+
+  // Refs so the document-level key handler always sees the freshest closures.
+  const handlersRef = useRef({
+    toggleTimer: () => {},
+    correct: () => {},
+    skip: () => {},
+    undo: () => {},
+    pause: () => {},
+  });
+  handlersRef.current.toggleTimer = () => {
+    if (isCountingRef.current) stop();
+    else start();
   };
-  nextWordRef.current = () => handleOperate(undefined);
+  handlersRef.current.correct = () => handleOperate(true);
+  handlersRef.current.skip = () => handleOperate(undefined);
+  handlersRef.current.undo = handleUndo;
+  handlersRef.current.pause = stop;
 
   useEffect(() => {
     const onKeyUp = (e: KeyboardEvent) => {
-      if (e.key === " ") {
+      // Don't hijack typing in the seconds input.
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" || target.tagName === "TEXTAREA")
+      ) {
+        return;
+      }
+      const map: Record<string, (() => void) | undefined> = {
+        " ": handlersRef.current.toggleTimer,
+        ArrowRight: handlersRef.current.correct,
+        ArrowUp: handlersRef.current.correct,
+        ArrowDown: handlersRef.current.skip,
+        ArrowLeft: handlersRef.current.undo,
+        Escape: handlersRef.current.pause,
+      };
+      const fn = map[e.key];
+      if (fn) {
         e.preventDefault();
-        toggleTimerRef.current();
-      } else if (e.key === "ArrowDown") {
-        e.preventDefault();
-        nextWordRef.current();
+        fn();
       }
     };
     document.addEventListener("keyup", onKeyUp);
     return () => document.removeEventListener("keyup", onKeyUp);
   }, []);
 
-  const clearRecord = () => setLibRecords([]);
-
   const recoverLib = () => {
-    setLibRecords([]);
     reset();
-    resetWords();
+    resetDeck();
+    setImportMsg("");
   };
 
-  const hasRecords = !!libRecords.length;
+  const handleApplyCustomLib = () => {
+    const n = applyCustomLib(customLibInput);
+    if (n === 0) {
+      setImportMsg("请粘贴至少一个词条（按行、逗号或空格分隔）");
+      return;
+    }
+    reset();
+    setCustomLibInput("");
+    setImportMsg(`已应用自定义词库，共 ${n} 个词条`);
+  };
+
+  const hasRecords = libRecords.length > 0;
+  const progress = seconds > 0 ? (count / seconds) * 100 : 0;
+  const lowTime = count > 0 && count <= Math.min(10, Math.ceil(seconds * 0.2));
 
   return (
     <div className="App">
       <header className="App-header">
         <div className="header-count">
-          <span>{count}</span>
+          <span className={lowTime ? "count-low" : ""}>{count}</span>
           <TextField
             id="standard-number"
             label="设置倒计时时长"
@@ -140,25 +197,44 @@ function App() {
             value={seconds}
             onChange={(e) => {
               const v = Number(e.target.value);
-              setSeconds(Number.isFinite(v) && v > 0 ? Math.floor(v) : 1);
+              if (!Number.isFinite(v)) return;
+              setSeconds(
+                Math.min(MAX_SECONDS, Math.max(MIN_SECONDS, Math.floor(v)))
+              );
             }}
             InputLabelProps={{ shrink: true }}
-            inputProps={{ min: 1 }}
+            inputProps={{ min: MIN_SECONDS, max: MAX_SECONDS }}
           />
         </div>
 
+        <LinearProgress
+          className="countdown-bar"
+          variant="determinate"
+          value={progress}
+          color={lowTime ? "secondary" : "primary"}
+        />
+
         <div className="main">
-          <span>{word || "没有词条了"}</span>
+          <span
+            style={{
+              fontSize: word ? fontSizeFor(word.length) : "clamp(44px, 11vmin, 80px)",
+            }}
+          >
+            {word || "没有词条了"}
+          </span>
+          <div className="remaining-hint">
+            剩余词条 {remaining} / {total}
+          </div>
         </div>
 
         <Grid
           container
           className="operation"
-          spacing={3}
+          spacing={2}
+          justifyContent="center"
           style={{ flexGrow: 0, width: "100%", margin: 0 }}
         >
-          <Grid item xs={3}></Grid>
-          <Grid item xs={4}>
+          <Grid item xs={12} sm={5}>
             <div className="timer-ctrl">
               <Button
                 size="large"
@@ -181,13 +257,14 @@ function App() {
               </Button>
             </div>
           </Grid>
-          <Grid item xs={4}>
+          <Grid item xs={12} sm={5}>
             <div className="word-ctrl">
               <Button
                 size="large"
                 variant="contained"
                 color="primary"
                 onClick={() => handleOperate(true)}
+                disabled={!word || count === 0}
               >
                 正确
               </Button>
@@ -195,8 +272,18 @@ function App() {
                 size="large"
                 variant="contained"
                 onClick={() => handleOperate(undefined)}
+                disabled={!word || count === 0}
               >
                 跳过
+              </Button>
+              <Button
+                size="large"
+                variant="contained"
+                startIcon={<Undo />}
+                onClick={handleUndo}
+                disabled={!canUndo}
+              >
+                撤销
               </Button>
               <Button
                 size="large"
@@ -208,13 +295,15 @@ function App() {
             </div>
           </Grid>
         </Grid>
+
+        <div className="shortcut-hint">
+          快捷键：空格 开始/暂停 · → 正确 · ↓ 跳过 · ← 撤销 · Esc 暂停
+        </div>
       </header>
       <Drawer
-        anchor={"right"}
+        anchor="right"
         open={showRecords}
-        onClose={() => {
-          setShowRecords(false);
-        }}
+        onClose={() => setShowRecords(false)}
       >
         {hasRecords ? (
           <>
@@ -227,34 +316,32 @@ function App() {
                 {libRecords.filter((item) => item.pass === undefined).length}
               </div>
             </div>
-            {libRecords.map((record, idx) => {
-              return (
-                <div
-                  key={idx}
-                  style={{
-                    width: 250,
-                    padding: "10px 20px",
-                    display: "flex",
-                    alignItems: "center",
-                  }}
-                >
-                  <span style={{ display: "inline-block", width: "150px" }}>
-                    {record.word}:
-                  </span>
-                  {record.pass && <CheckCircle color="primary" />}
-                  {record.pass === false && <Cancel color="error" />}
-                  {record.pass === undefined && (
-                    <ArrowForward color="primary" />
-                  )}
-                </div>
-              );
-            })}
+            {libRecords.map((record, idx) => (
+              <div
+                key={idx}
+                style={{
+                  width: 250,
+                  padding: "10px 20px",
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
+                <span style={{ display: "inline-block", width: "150px" }}>
+                  {record.word}:
+                </span>
+                {record.pass ? (
+                  <CheckCircle color="primary" />
+                ) : (
+                  <ArrowForward color="primary" />
+                )}
+              </div>
+            ))}
             <Button
               size="large"
               variant="contained"
               color="secondary"
               style={{ width: "50%", marginLeft: 20 }}
-              onClick={() => clearRecord()}
+              onClick={clearRecords}
             >
               清除记录
             </Button>
@@ -262,15 +349,32 @@ function App() {
         ) : (
           <div style={{ width: 250, padding: "20px" }}>暂无记录</div>
         )}
-        <Button
-          size="large"
-          variant="contained"
-          color="primary"
-          style={{ marginTop: 20, width: "50%", marginLeft: 20 }}
-          onClick={() => recoverLib()}
-        >
-          恢复词库
-        </Button>
+        <div className="lib-import">
+          <div className="lib-import-title">
+            词库 · 当前：{isCustomLib ? "自定义" : "默认"}（共 {total} 词）
+          </div>
+          <TextareaAutosize
+            minRows={4}
+            placeholder="粘贴自定义词库：每行一个，或用逗号 / 空格分隔"
+            value={customLibInput}
+            onChange={(e) => setCustomLibInput(e.target.value)}
+            className="lib-import-textarea"
+          />
+          {importMsg && <div className="lib-import-msg">{importMsg}</div>}
+          <div className="lib-import-actions">
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleApplyCustomLib}
+              disabled={!customLibInput.trim()}
+            >
+              应用自定义
+            </Button>
+            <Button variant="contained" onClick={recoverLib}>
+              恢复默认词库
+            </Button>
+          </div>
+        </div>
       </Drawer>
     </div>
   );
