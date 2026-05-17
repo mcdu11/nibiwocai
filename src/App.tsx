@@ -39,6 +39,12 @@ function App() {
 
   const isCountingRef = useRef(false);
 
+  // useCountdown's reset is re-created every render (no useCallback inside the
+  // library). Hide that behind a ref so our `reset` keeps a stable identity
+  // and is safe to put in effect dependency arrays.
+  const originResetRef = useRef(originReset);
+  originResetRef.current = originReset;
+
   const start = useCallback(() => {
     originStart();
     isCountingRef.current = true;
@@ -50,9 +56,9 @@ function App() {
   }, [originStop]);
 
   const reset = useCallback(() => {
-    originReset();
+    originResetRef.current();
     isCountingRef.current = false;
-  }, [originReset]);
+  }, []);
 
   const [showRecords, setShowRecords] = React.useState(false);
 

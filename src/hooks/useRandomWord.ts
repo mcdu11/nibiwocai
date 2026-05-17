@@ -16,8 +16,11 @@ function shuffle<T>(arr: readonly T[]): T[] {
   return a;
 }
 
-// Computed once per page load; only used the first time localStorage is empty.
+// Module-level constants so useLocalStorage's readValue/handleStorageChange
+// callbacks keep stable identities across renders (initialValue is part of
+// their dep list).
 const initialDeck = shuffle(lib);
+const EMPTY_RECORDS: LibRecord[] = [];
 
 // Deck-based draw: shuffle once, advance an index. Persist both so a refresh
 // resumes where the player left off; supports cheap undo by decrementing the
@@ -27,7 +30,7 @@ export function useRandomWord() {
   const [idx, setIdx] = useLocalStorage<number>("WORD_DECK_IDX", 0);
   const [libRecords, setLibRecords] = useLocalStorage<LibRecord[]>(
     "LIB_RECORDS",
-    []
+    EMPTY_RECORDS
   );
   const [isCustomLib, setIsCustomLib] = useLocalStorage<boolean>(
     "IS_CUSTOM_LIB",
