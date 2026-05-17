@@ -61,6 +61,7 @@ function App() {
   }, []);
 
   const [showRecords, setShowRecords] = React.useState(false);
+  const isCounting = isCountingRef.current;
 
   const {
     word,
@@ -187,6 +188,13 @@ function App() {
     setImportMsg(`已应用自定义词库，共 ${n} 个词条`);
   };
 
+  const handleClearRecords = () => {
+    if (!hasRecords) return;
+    if (window.confirm("确认清除所有记录吗？")) {
+      clearRecords();
+    }
+  };
+
   const hasRecords = libRecords.length > 0;
   const progress = seconds > 0 ? (count / seconds) * 100 : 0;
   const lowTime = count > 0 && count <= Math.min(10, Math.ceil(seconds * 0.2));
@@ -231,6 +239,13 @@ function App() {
           <div className="remaining-hint">
             剩余词条 {remaining} / {total}
           </div>
+          <div className="status-hint">
+            {count === 0
+              ? "时间到，请重置或调整时长后继续"
+              : isCounting
+              ? "倒计时进行中"
+              : "已暂停，点击开始继续"}
+          </div>
         </div>
 
         <Grid
@@ -246,17 +261,9 @@ function App() {
                 size="large"
                 variant="contained"
                 color="primary"
-                onClick={start}
+                onClick={isCounting ? stop : start}
               >
-                开始
-              </Button>
-              <Button
-                size="large"
-                variant="contained"
-                color="secondary"
-                onClick={stop}
-              >
-                暂停
+                {isCounting ? "暂停" : "开始"}
               </Button>
               <Button size="large" variant="contained" onClick={reset}>
                 重置
@@ -272,7 +279,7 @@ function App() {
                 onClick={() => handleOperate(true)}
                 disabled={!word || count === 0}
               >
-                正确
+                正确（→）
               </Button>
               <Button
                 size="large"
@@ -280,7 +287,7 @@ function App() {
                 onClick={() => handleOperate(undefined)}
                 disabled={!word || count === 0}
               >
-                跳过
+                跳过（↓）
               </Button>
               <Button
                 size="large"
@@ -289,7 +296,7 @@ function App() {
                 onClick={handleUndo}
                 disabled={!canUndo}
               >
-                撤销
+                撤销（←）
               </Button>
               <Button
                 size="large"
@@ -347,7 +354,7 @@ function App() {
               variant="contained"
               color="secondary"
               style={{ width: "50%", marginLeft: 20 }}
-              onClick={clearRecords}
+              onClick={handleClearRecords}
             >
               清除记录
             </Button>
