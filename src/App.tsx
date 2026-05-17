@@ -3,6 +3,7 @@ import {
   Drawer,
   Grid,
   LinearProgress,
+  Snackbar,
   TextField,
   TextareaAutosize,
 } from "@material-ui/core";
@@ -61,6 +62,7 @@ function App() {
   }, []);
 
   const [showRecords, setShowRecords] = React.useState(false);
+  const [snackbarMsg, setSnackbarMsg] = React.useState("");
 
   const {
     word,
@@ -114,15 +116,23 @@ function App() {
 
   const handleOperate = useCallback(
     (pass?: boolean) => {
-      if (!word || count === 0) return;
+      if (!word || count === 0) {
+        setSnackbarMsg("请先开始计时后再操作词条");
+        return;
+      }
       next(pass);
+      setSnackbarMsg(pass ? "已标记为正确" : "已跳过，进入下一题");
     },
     [word, count, next]
   );
 
   const handleUndo = useCallback(() => {
-    if (!canUndo) return;
+    if (!canUndo) {
+      setSnackbarMsg("暂无可撤销操作");
+      return;
+    }
     undo();
+    setSnackbarMsg("已撤销上一步");
   }, [canUndo, undo]);
 
   // Refs so the document-level key handler always sees the freshest closures.
@@ -185,9 +195,11 @@ function App() {
     reset();
     setCustomLibInput("");
     setImportMsg(`已应用自定义词库，共 ${n} 个词条`);
+    setSnackbarMsg(`自定义词库已生效（${n} 词）`);
   };
 
   const hasRecords = libRecords.length > 0;
+  const isIdle = !isCountingRef.current;
   const progress = seconds > 0 ? (count / seconds) * 100 : 0;
   const lowTime = count > 0 && count <= Math.min(10, Math.ceil(seconds * 0.2));
 
@@ -247,6 +259,7 @@ function App() {
                 variant="contained"
                 color="primary"
                 onClick={start}
+                disabled={!word || !isIdle}
               >
                 开始
               </Button>
@@ -255,6 +268,7 @@ function App() {
                 variant="contained"
                 color="secondary"
                 onClick={stop}
+                disabled={isIdle}
               >
                 暂停
               </Button>
@@ -347,7 +361,10 @@ function App() {
               variant="contained"
               color="secondary"
               style={{ width: "50%", marginLeft: 20 }}
-              onClick={clearRecords}
+              onClick={() => {
+                clearRecords();
+                setSnackbarMsg("记录已清除");
+              }}
             >
               清除记录
             </Button>
@@ -382,6 +399,13 @@ function App() {
           </div>
         </div>
       </Drawer>
+      <Snackbar
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        open={Boolean(snackbarMsg)}
+        autoHideDuration={1600}
+        onClose={() => setSnackbarMsg("")}
+        message={snackbarMsg}
+      />
     </div>
   );
 }
