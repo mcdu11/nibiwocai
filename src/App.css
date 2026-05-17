@@ -3,69 +3,42 @@
   background-color: rgb(254, 234, 209);
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
 .App-header {
-  /* background-color: #282c34; */
   min-height: 100vh;
-  min-width: 1200px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  /* justify-content: center; */
   font-size: calc(10px + 2vmin);
-  /* color: white; */
   color: black;
   background-image: url('./images/game_bg1.JPG');
   background-repeat: no-repeat;
-  background-size: auto 100%;
+  background-size: cover;
   background-position: center center;
-}
-
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 .header-count {
   display: flex;
-  justify-content: flex-end;
   justify-content: center;
   align-items: center;
   width: 100%;
   height: 100px;
-  flex: 0;
+  flex: 0 0 auto;
   box-sizing: border-box;
+  gap: 16px;
+  padding: 0 12px;
 }
 
 .header-count span {
-  font-size: 140px;
+  font-size: clamp(64px, 18vw, 140px);
   font-weight: 600;
 }
 
 .main {
-  min-height: 300px;
+  min-height: 240px;
   width: 100%;
   flex: 1;
   box-sizing: border-box;
-  padding: 0 10%;
+  padding: 0 6%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -81,14 +54,13 @@
 
 .remaining-hint {
   margin-top: 16px;
-  font-size: 18px;
+  font-size: 16px;
   color: rgba(0, 0, 0, 0.5);
 }
 
 .operation {
   display: flex;
-  flex: 0;
-  flex-basis: 180px;
+  flex: 0 0 auto;
 }
 
 .timer-ctrl,
@@ -96,6 +68,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  justify-content: center;
 }
 
 .MuiButton-containedSizeLarge {
@@ -120,5 +93,43 @@
 .shortcut-hint {
   font-size: 14px;
   color: rgba(0, 0, 0, 0.55);
-  padding: 8px 0 16px;
+  padding: 8px 12px 16px;
+  text-align: center;
+}
+
+/* Mobile-friendly tweaks: stack controls and shrink ornamental text. */
+@media (max-width: 600px) {
+  .header-count {
+    height: 80px;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .header-count span {
+    font-size: clamp(56px, 16vw, 96px);
+  }
+
+  .main {
+    padding: 0 4%;
+  }
+
+  .remaining-hint {
+    font-size: 13px;
+    margin-top: 8px;
+  }
+
+  .timer-ctrl,
+  .word-ctrl {
+    width: 100%;
+  }
+
+  .timer-ctrl .MuiButton-containedSizeLarge,
+  .word-ctrl .MuiButton-containedSizeLarge {
+    flex: 1 1 auto;
+    font-size: 1rem !important;
+  }
+
+  .shortcut-hint {
+    display: none;
+  }
 }

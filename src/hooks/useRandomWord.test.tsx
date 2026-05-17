@@ -14,12 +14,14 @@ function renderHook(): { result: { current: HookResult }; unmount: () => void } 
   }
   const container = document.createElement("div");
   document.body.appendChild(container);
+  // eslint-disable-next-line testing-library/no-unnecessary-act
   act(() => {
     ReactDOM.render(<HookHost />, container);
   });
   return {
     result,
     unmount: () => {
+      // eslint-disable-next-line testing-library/no-unnecessary-act
       act(() => {
         ReactDOM.unmountComponentAtNode(container);
       });

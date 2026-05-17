@@ -14,14 +14,14 @@ import { useRandomWord } from "./hooks/useRandomWord";
 const MIN_SECONDS = 1;
 const MAX_SECONDS = 999;
 
-// Word card font size scales down with character length so long entries fit.
-function fontSizeFor(len: number): number {
-  if (len <= 4) return 160;
-  if (len <= 6) return 130;
-  if (len <= 8) return 100;
-  if (len <= 12) return 76;
-  if (len <= 18) return 56;
-  return 42;
+// Word card font size scales with character length and viewport (mobile-friendly).
+function fontSizeFor(len: number): string {
+  if (len <= 4) return "clamp(64px, 18vmin, 160px)";
+  if (len <= 6) return "clamp(54px, 14vmin, 130px)";
+  if (len <= 8) return "clamp(44px, 11vmin, 100px)";
+  if (len <= 12) return "clamp(34px, 9vmin, 76px)";
+  if (len <= 18) return "clamp(28px, 7vmin, 56px)";
+  return "clamp(22px, 6vmin, 42px)";
 }
 
 function App() {
@@ -197,7 +197,11 @@ function App() {
         />
 
         <div className="main">
-          <span style={{ fontSize: word ? fontSizeFor(word.length) : 80 }}>
+          <span
+            style={{
+              fontSize: word ? fontSizeFor(word.length) : "clamp(44px, 11vmin, 80px)",
+            }}
+          >
             {word || "没有词条了"}
           </span>
           <div className="remaining-hint">
@@ -208,11 +212,11 @@ function App() {
         <Grid
           container
           className="operation"
-          spacing={3}
+          spacing={2}
+          justifyContent="center"
           style={{ flexGrow: 0, width: "100%", margin: 0 }}
         >
-          <Grid item xs={3}></Grid>
-          <Grid item xs={4}>
+          <Grid item xs={12} sm={5}>
             <div className="timer-ctrl">
               <Button
                 size="large"
@@ -235,7 +239,7 @@ function App() {
               </Button>
             </div>
           </Grid>
-          <Grid item xs={4}>
+          <Grid item xs={12} sm={5}>
             <div className="word-ctrl">
               <Button
                 size="large"
