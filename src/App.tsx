@@ -6,6 +6,7 @@ import {
   Snackbar,
   TextField,
   TextareaAutosize,
+  useMediaQuery,
 } from "@material-ui/core";
 import { ArrowForward, CheckCircle, Undo } from "@material-ui/icons";
 import React, { useCallback, useEffect, useRef } from "react";
@@ -63,6 +64,7 @@ function App() {
 
   const [showRecords, setShowRecords] = React.useState(false);
   const [snackbarMsg, setSnackbarMsg] = React.useState("");
+  const isMobile = useMediaQuery("(max-width:600px)");
 
   const {
     word,
@@ -321,9 +323,12 @@ function App() {
         </div>
       </header>
       <Drawer
-        anchor="right"
+        anchor={isMobile ? "bottom" : "right"}
         open={showRecords}
         onClose={() => setShowRecords(false)}
+        PaperProps={{
+          className: isMobile ? "records-drawer-mobile" : "records-drawer",
+        }}
       >
         {hasRecords ? (
           <>
@@ -400,7 +405,10 @@ function App() {
         </div>
       </Drawer>
       <Snackbar
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        anchorOrigin={{
+          vertical: "bottom",
+          horizontal: "center",
+        }}
         open={Boolean(snackbarMsg)}
         autoHideDuration={1600}
         onClose={() => setSnackbarMsg("")}
