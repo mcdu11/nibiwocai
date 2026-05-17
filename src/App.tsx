@@ -1,42 +1,35 @@
 import { Button, Drawer, Grid, TextField } from "@material-ui/core";
 import { ArrowForward, Cancel, CheckCircle } from "@material-ui/icons";
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useCountdown } from "usehooks-ts";
 import "./App.css";
 import { useRandomWord } from "./hooks/useRandomWord";
 
 function App() {
-  const [intervalValue] = useState<number>(1000);
   const [seconds, setSeconds] = useState<number>(180);
   const [count, { start: originStart, stop: originStop, reset: originReset }] =
     useCountdown({
       seconds,
-      interval: intervalValue,
+      interval: 1000,
       isIncrement: false,
     });
 
   const isCountingRef = useRef(false);
 
-  const start = () => {
+  const start = useCallback(() => {
     originStart();
     isCountingRef.current = true;
-  };
+  }, [originStart]);
 
-  const stop = () => {
+  const stop = useCallback(() => {
     originStop();
     isCountingRef.current = false;
-  };
+  }, [originStop]);
 
-  const reset = () => {
+  const reset = useCallback(() => {
     originReset();
     isCountingRef.current = false;
-  };
+  }, [originReset]);
 
   const [showRecords, setShowRecords] = useState(false);
 
@@ -44,92 +37,93 @@ function App() {
     word,
     setWord,
     getRandomWord,
+    resetWords,
     libRecords,
     setLibRecords,
-    setUsedWords,
   } = useRandomWord();
 
-  useEffect(() => {
-    if (count === 0) {
-      stop();
+  const playBeep = useCallback(() => {
+    try {
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof AudioContext })
+          .webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.25, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.8);
+    } catch {
+      // Audio is best-effort; ignore failures (e.g. blocked autoplay).
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [count]);
+  }, []);
+
+  // Stop the timer and beep when the countdown reaches zero during a round.
+  useEffect(() => {
+    if (count === 0 && isCountingRef.current) {
+      stop();
+      playBeep();
+    }
+  }, [count, stop, playBeep]);
 
   useEffect(() => {
     reset();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [seconds]);
+  }, [seconds, reset]);
 
   useEffect(() => {
-    const w = getRandomWord();
-    setWord(w);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    setWord(getRandomWord());
+  }, [getRandomWord, setWord]);
 
-  const handleKeyup = useCallback((e: KeyboardEvent) => {
-    e.preventDefault();
-    keyCallbackMap?.[e.key]?.();
-    // eslint-disable-next-line
-  }, []);
+  const handleOperate = useCallback(
+    (pass?: boolean) => {
+      if (!word || count === 0) {
+        return;
+      }
+      setLibRecords((pre) => [...pre, { word, pass }]);
+      setWord(getRandomWord());
+    },
+    [word, count, setLibRecords, setWord, getRandomWord]
+  );
 
-  useEffect(() => {
-    document.addEventListener("keyup", handleKeyup);
-
-    return () => {
-      document.removeEventListener("keyup", handleKeyup);
-    };
-  }, [handleKeyup]);
-
-  const handleOpreate = (pass?: boolean) => {
-    if (!word || count === 0) {
-      return;
+  // Keep the latest handlers in refs so the global key listener (registered
+  // once) always invokes the freshest closures.
+  const toggleTimerRef = useRef<() => void>(() => {});
+  const nextWordRef = useRef<() => void>(() => {});
+  toggleTimerRef.current = () => {
+    if (isCountingRef.current) {
+      stop();
+    } else {
+      start();
     }
-    // 记录当前的 词条
-    setLibRecords((pre) => {
-      pre.push({
-        word: word || "",
-        pass,
-      });
-
-      return pre;
-    });
-
-    setTimeout(() => {
-      handleNext();
-    }, 10);
   };
+  nextWordRef.current = () => handleOperate(undefined);
 
-  const keyCallbackMap: { [index: string]: Function } = useMemo(() => {
-    return {
-      // 空格
-      " ": () => {
-        if (isCountingRef.current) {
-          stop();
-        } else {
-          start();
-        }
-      },
-      // 下箭头
-      ArrowDown: () => {
-        handleOpreate(undefined);
-      },
+  useEffect(() => {
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === " ") {
+        e.preventDefault();
+        toggleTimerRef.current();
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        nextWordRef.current();
+      }
     };
-    // eslint-disable-next-line
+    document.addEventListener("keyup", onKeyUp);
+    return () => document.removeEventListener("keyup", onKeyUp);
   }, []);
 
-  const handleNext = () => {
-    const w = getRandomWord();
-    setWord(w);
-  };
-
-  const clearRecord = () => {
-    setLibRecords([]);
-  };
+  const clearRecord = () => setLibRecords([]);
 
   const recoverLib = () => {
-    setUsedWords([]);
-    window.location.reload();
+    setLibRecords([]);
+    reset();
+    resetWords();
   };
 
   const hasRecords = !!libRecords.length;
@@ -145,12 +139,11 @@ function App() {
             type="number"
             value={seconds}
             onChange={(e) => {
-              console.log(e.target.value);
-              setSeconds(Number(e.target.value));
+              const v = Number(e.target.value);
+              setSeconds(Number.isFinite(v) && v > 0 ? Math.floor(v) : 1);
             }}
-            InputLabelProps={{
-              shrink: true,
-            }}
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ min: 1 }}
           />
         </div>
 
@@ -194,22 +187,14 @@ function App() {
                 size="large"
                 variant="contained"
                 color="primary"
-                onClick={() => handleOpreate(true)}
+                onClick={() => handleOperate(true)}
               >
                 正确
               </Button>
-              {/* <Button
-                size="large"
-                variant="contained"
-                color="secondary"
-                onClick={() => handleOpreate(false)}
-              >
-                错误
-              </Button> */}
               <Button
                 size="large"
                 variant="contained"
-                onClick={() => handleOpreate(undefined)}
+                onClick={() => handleOperate(undefined)}
               >
                 跳过
               </Button>
@@ -235,15 +220,11 @@ function App() {
           <>
             <div style={{ marginLeft: 20 }}>
               <div>
-                正确：{libRecords?.filter((item) => item.pass === true)?.length}
+                正确：{libRecords.filter((item) => item.pass === true).length}
               </div>
-              {/* <div>
-                错误：
-                {libRecords?.filter((item) => item.pass === false)?.length}
-              </div> */}
               <div>
                 跳过：
-                {libRecords?.filter((item) => item.pass === undefined)?.length}
+                {libRecords.filter((item) => item.pass === undefined).length}
               </div>
             </div>
             {libRecords.map((record, idx) => {

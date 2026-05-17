@@ -1,9 +1,3 @@
-export const testlib = Array(20)
-  .fill(0)
-  .map((_, idx) => {
-    return `测试词条${idx + 1}`;
-  });
-
 export const lib = [
   "三个字",
   "雪上加霜",
