@@ -106,6 +106,45 @@ describe("useRandomWord", () => {
     unmount();
   });
 
+  test("applyCustomLib() replaces the deck and flips isCustomLib", () => {
+    const { result, unmount } = renderHook();
+    let applied = 0;
+    act(() => {
+      applied = result.current.applyCustomLib("aaa, bbb\nccc ddd\nbbb");
+    });
+    expect(applied).toBe(4);
+    expect(result.current.total).toBe(4);
+    expect(result.current.remaining).toBe(4);
+    expect(result.current.isCustomLib).toBe(true);
+    expect(["aaa", "bbb", "ccc", "ddd"]).toContain(result.current.word);
+    unmount();
+  });
+
+  test("applyCustomLib() rejects empty input and returns 0", () => {
+    const { result, unmount } = renderHook();
+    const beforeTotal = result.current.total;
+    let applied = -1;
+    act(() => {
+      applied = result.current.applyCustomLib("   \n , ; ");
+    });
+    expect(applied).toBe(0);
+    expect(result.current.total).toBe(beforeTotal);
+    expect(result.current.isCustomLib).toBe(false);
+    unmount();
+  });
+
+  test("resetDeck() also clears isCustomLib", () => {
+    const { result, unmount } = renderHook();
+    act(() => {
+      result.current.applyCustomLib("a b c");
+    });
+    expect(result.current.isCustomLib).toBe(true);
+    act(() => result.current.resetDeck());
+    expect(result.current.isCustomLib).toBe(false);
+    expect(result.current.total).toBe(lib.length);
+    unmount();
+  });
+
   test("clearRecords() empties history without touching the deck", () => {
     const { result, unmount } = renderHook();
     act(() => result.current.next(true));

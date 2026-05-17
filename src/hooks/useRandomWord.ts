@@ -29,6 +29,10 @@ export function useRandomWord() {
     "LIB_RECORDS",
     []
   );
+  const [isCustomLib, setIsCustomLib] = useLocalStorage<boolean>(
+    "IS_CUSTOM_LIB",
+    false
+  );
 
   const word = idx < deck.length ? deck[idx] : undefined;
 
@@ -51,20 +55,45 @@ export function useRandomWord() {
     setDeck(shuffle(lib));
     setIdx(0);
     setLibRecords([]);
-  }, [setDeck, setIdx, setLibRecords]);
+    setIsCustomLib(false);
+  }, [setDeck, setIdx, setLibRecords, setIsCustomLib]);
 
   const clearRecords = useCallback(() => {
     setLibRecords([]);
   }, [setLibRecords]);
+
+  // Parse a pasted/uploaded string into a deduped list of trimmed entries.
+  // Accepts newline, comma, or whitespace as separators.
+  const applyCustomLib = useCallback(
+    (raw: string): number => {
+      const words = Array.from(
+        new Set(
+          raw
+            .split(/[\n,，、;；\s]+/)
+            .map((w) => w.trim())
+            .filter(Boolean)
+        )
+      );
+      if (!words.length) return 0;
+      setDeck(shuffle(words));
+      setIdx(0);
+      setLibRecords([]);
+      setIsCustomLib(true);
+      return words.length;
+    },
+    [setDeck, setIdx, setLibRecords, setIsCustomLib]
+  );
 
   return {
     word,
     remaining: Math.max(0, deck.length - idx),
     total: deck.length,
     canUndo: idx > 0,
+    isCustomLib,
     next,
     undo,
     resetDeck,
+    applyCustomLib,
     libRecords,
     clearRecords,
   };

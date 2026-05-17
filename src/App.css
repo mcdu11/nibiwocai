@@ -97,6 +97,45 @@
   text-align: center;
 }
 
+.lib-import {
+  width: 290px;
+  padding: 16px 20px;
+  border-top: 1px solid rgba(0, 0, 0, 0.12);
+  margin-top: 20px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lib-import-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.75);
+}
+
+.lib-import-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 14px;
+  padding: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.23);
+  border-radius: 4px;
+  resize: vertical;
+}
+
+.lib-import-msg {
+  font-size: 13px;
+  color: #1976d2;
+}
+
+.lib-import-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 /* Mobile-friendly tweaks: stack controls and shrink ornamental text. */
 @media (max-width: 600px) {
   .header-count {

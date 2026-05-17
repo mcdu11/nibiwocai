@@ -4,6 +4,7 @@ import {
   Grid,
   LinearProgress,
   TextField,
+  TextareaAutosize,
 } from "@material-ui/core";
 import { ArrowForward, CheckCircle, Undo } from "@material-ui/icons";
 import React, { useCallback, useEffect, useRef } from "react";
@@ -60,12 +61,17 @@ function App() {
     remaining,
     total,
     canUndo,
+    isCustomLib,
     next,
     undo,
     resetDeck,
+    applyCustomLib,
     libRecords,
     clearRecords,
   } = useRandomWord();
+
+  const [customLibInput, setCustomLibInput] = React.useState("");
+  const [importMsg, setImportMsg] = React.useState<string>("");
 
   const playBeep = useCallback(() => {
     try {
@@ -161,6 +167,18 @@ function App() {
   const recoverLib = () => {
     reset();
     resetDeck();
+    setImportMsg("");
+  };
+
+  const handleApplyCustomLib = () => {
+    const n = applyCustomLib(customLibInput);
+    if (n === 0) {
+      setImportMsg("请粘贴至少一个词条（按行、逗号或空格分隔）");
+      return;
+    }
+    reset();
+    setCustomLibInput("");
+    setImportMsg(`已应用自定义词库，共 ${n} 个词条`);
   };
 
   const hasRecords = libRecords.length > 0;
@@ -331,15 +349,32 @@ function App() {
         ) : (
           <div style={{ width: 250, padding: "20px" }}>暂无记录</div>
         )}
-        <Button
-          size="large"
-          variant="contained"
-          color="primary"
-          style={{ marginTop: 20, width: "50%", marginLeft: 20 }}
-          onClick={recoverLib}
-        >
-          恢复词库
-        </Button>
+        <div className="lib-import">
+          <div className="lib-import-title">
+            词库 · 当前：{isCustomLib ? "自定义" : "默认"}（共 {total} 词）
+          </div>
+          <TextareaAutosize
+            minRows={4}
+            placeholder="粘贴自定义词库：每行一个，或用逗号 / 空格分隔"
+            value={customLibInput}
+            onChange={(e) => setCustomLibInput(e.target.value)}
+            className="lib-import-textarea"
+          />
+          {importMsg && <div className="lib-import-msg">{importMsg}</div>}
+          <div className="lib-import-actions">
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleApplyCustomLib}
+              disabled={!customLibInput.trim()}
+            >
+              应用自定义
+            </Button>
+            <Button variant="contained" onClick={recoverLib}>
+              恢复默认词库
+            </Button>
+          </div>
+        </div>
       </Drawer>
     </div>
   );
