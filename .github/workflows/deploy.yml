@@ -1,35 +1,54 @@
 name: Deploy GitHub Pages
 
-# 触发条件：在 push 到 master 分支后
 on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
-# 任务
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
 jobs:
-  build-and-deploy:
-    # 服务器环境：最新版 Ubuntu
+  build:
     runs-on: ubuntu-latest
     steps:
-      # 拉取代码
       - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          persist-credentials: false
+        uses: actions/checkout@v4
 
-      # 1、生成静态文件
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
       - name: Build
-        run: npm install && npm run build
+        run: yarn build
 
-      # 2、部署到 GitHub Pages
-      - name: Deploy To Github Pages
-        uses: JamesIves/github-pages-deploy-action@releases/v3
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
         with:
-          ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-          REPOSITORY_NAME: mcdu11/nibiwocai
-          BRANCH: gh-pages
-          FOLDER: build
-          #注意这里的 public 是仓库根目录下的 public，也就是 npm run build 生成静态资源的路径，比如有的人是 `docs/.vuepress/dist`
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
