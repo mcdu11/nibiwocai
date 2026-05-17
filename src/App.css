@@ -58,6 +58,12 @@
   color: rgba(0, 0, 0, 0.5);
 }
 
+.status-hint {
+  margin-top: 8px;
+  font-size: 14px;
+  color: rgba(0, 0, 0, 0.62);
+}
+
 .operation {
   display: flex;
   flex: 0 0 auto;
