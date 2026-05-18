@@ -121,6 +121,28 @@ describe("App integration", () => {
     expect(stored[0].pass).toBeUndefined();
   });
 
+  test("game-over modal appears when the timer runs out", () => {
+    // eslint-disable-next-line testing-library/no-unnecessary-act
+    act(() => {
+      ReactDOM.render(<App />, container);
+    });
+
+    expect(container.querySelector('[data-testid="game-over"]')).toBeNull();
+
+    act(() => {
+      Simulate.click(byTestId(container, "timer-toggle"));
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(180_000);
+    });
+
+    expect(getCount(container)).toBe(0);
+    expect(
+      container.querySelector('[data-testid="game-over"]')
+    ).not.toBeNull();
+  });
+
   test("undo restores the previous word", () => {
     // eslint-disable-next-line testing-library/no-unnecessary-act
     act(() => {

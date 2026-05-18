@@ -10,6 +10,7 @@ import React, { useCallback, useEffect, useRef } from "react";
 import { useCountdown, useLocalStorage } from "usehooks-ts";
 import "./App.css";
 import { ActionBar } from "./components/ActionBar";
+import { GameOverModal } from "./components/GameOverModal";
 import { TimerRing } from "./components/TimerRing";
 import { WordCard } from "./components/WordCard";
 import { playCorrect, playSkip, playTimeUp, vibrate } from "./feedback";
@@ -35,7 +36,24 @@ function App() {
   const originResetRef = useRef(originReset);
   originResetRef.current = originReset;
 
+  // refs let us peek the latest count/seconds/libRecords inside callbacks
+  // without forcing them into useCallback deps.
+  const countRef = useRef(count);
+  countRef.current = count;
+  const secondsRef = useRef(seconds);
+  secondsRef.current = seconds;
+
+  const [roundStartLen, setRoundStartLen] = React.useState(0);
+  const [showGameOver, setShowGameOver] = React.useState(false);
+
   const start = useCallback(() => {
+    // Snapshot the records position when the player starts a *fresh* round
+    // (timer at full). Pausing & resuming doesn't count.
+    if (countRef.current === secondsRef.current) {
+      // libRecords.length is read via libRecordsRef below; setRoundStartLen
+      // captures it indirectly by reading inside the callback body.
+      setRoundStartLen(libRecordsLenRef.current);
+    }
     originStart();
     isCountingRef.current = true;
   }, [originStart]);
@@ -83,11 +101,15 @@ function App() {
   const [customLibInput, setCustomLibInput] = React.useState("");
   const [importMsg, setImportMsg] = React.useState("");
 
+  const libRecordsLenRef = useRef(libRecords.length);
+  libRecordsLenRef.current = libRecords.length;
+
   useEffect(() => {
     if (count === 0 && isCountingRef.current) {
       stop();
       if (settingsRef.current.soundOn) playTimeUp();
       if (settingsRef.current.vibrationOn) vibrate([200, 100, 200]);
+      setShowGameOver(true);
     }
   }, [count, stop]);
 
@@ -202,6 +224,10 @@ function App() {
 
   const correctCount = libRecords.filter((r) => r.pass === true).length;
   const skipCount = libRecords.filter((r) => r.pass === undefined).length;
+
+  const roundRecords = libRecords.slice(roundStartLen);
+  const roundCorrect = roundRecords.filter((r) => r.pass === true).length;
+  const roundSkip = roundRecords.filter((r) => r.pass === undefined).length;
 
   const themeOptions: { value: ThemeMode; label: string }[] = [
     { value: "auto", label: "跟随系统" },
@@ -425,6 +451,22 @@ function App() {
           </div>
         </div>
       </Drawer>
+
+      <GameOverModal
+        open={showGameOver}
+        correct={roundCorrect}
+        skip={roundSkip}
+        durationSeconds={seconds}
+        onNewRound={() => {
+          setShowGameOver(false);
+          reset();
+        }}
+        onViewRecords={() => {
+          setShowGameOver(false);
+          setShowRecords(true);
+        }}
+        onClose={() => setShowGameOver(false)}
+      />
     </div>
   );
 }
