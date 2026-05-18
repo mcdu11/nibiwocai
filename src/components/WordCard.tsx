@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 interface WordCardProps {
   word: string | undefined;
   remaining: number;
   total: number;
   status: "idle" | "running" | "ended" | "exhausted";
+  wordKey: number;
 }
 
 // Font size scales with character length and viewport so long entries fit.
@@ -24,18 +25,33 @@ const STATUS_LABEL: Record<WordCardProps["status"], string> = {
   exhausted: "本副牌已抽完 · 在设置里恢复词库",
 };
 
-export function WordCard({ word, remaining, total, status }: WordCardProps) {
-  // Re-trigger the entrance animation each time the word changes.
+type Direction = "next" | "back" | "initial";
+
+export function WordCard({
+  word,
+  remaining,
+  total,
+  status,
+  wordKey,
+}: WordCardProps) {
+  const prevKeyRef = useRef(wordKey);
+  const [direction, setDirection] = useState<Direction>("initial");
+  // Bump key per word change so the entrance animation restarts.
   const [animKey, setAnimKey] = useState(0);
+
   useEffect(() => {
+    const prev = prevKeyRef.current;
+    if (wordKey === prev) return;
+    setDirection(wordKey > prev ? "next" : "back");
     setAnimKey((k) => k + 1);
-  }, [word]);
+    prevKeyRef.current = wordKey;
+  }, [wordKey]);
 
   return (
     <section className="word-card" data-testid="word-card">
       <div
         key={animKey}
-        className="word-card__word"
+        className={`word-card__word word-card__word--${direction}`}
         data-testid="word"
         style={{
           fontSize: word ? fontSizeFor(word.length) : "clamp(36px, 9vmin, 64px)",

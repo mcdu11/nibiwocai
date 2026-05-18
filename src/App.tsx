@@ -1,6 +1,8 @@
 import {
   Button,
   Drawer,
+  FormControlLabel,
+  Switch,
   TextField,
   TextareaAutosize,
 } from "@material-ui/core";
@@ -8,9 +10,12 @@ import React, { useCallback, useEffect, useRef } from "react";
 import { useCountdown, useLocalStorage } from "usehooks-ts";
 import "./App.css";
 import { ActionBar } from "./components/ActionBar";
+import { GameOverModal } from "./components/GameOverModal";
 import { TimerRing } from "./components/TimerRing";
 import { WordCard } from "./components/WordCard";
+import { playCorrect, playSkip, playTimeUp, vibrate } from "./feedback";
 import { useRandomWord } from "./hooks/useRandomWord";
+import { ThemeMode, useSettings } from "./hooks/useSettings";
 
 const MIN_SECONDS = 1;
 const MAX_SECONDS = 999;
@@ -31,7 +36,24 @@ function App() {
   const originResetRef = useRef(originReset);
   originResetRef.current = originReset;
 
+  // refs let us peek the latest count/seconds/libRecords inside callbacks
+  // without forcing them into useCallback deps.
+  const countRef = useRef(count);
+  countRef.current = count;
+  const secondsRef = useRef(seconds);
+  secondsRef.current = seconds;
+
+  const [roundStartLen, setRoundStartLen] = React.useState(0);
+  const [showGameOver, setShowGameOver] = React.useState(false);
+
   const start = useCallback(() => {
+    // Snapshot the records position when the player starts a *fresh* round
+    // (timer at full). Pausing & resuming doesn't count.
+    if (countRef.current === secondsRef.current) {
+      // libRecords.length is read via libRecordsRef below; setRoundStartLen
+      // captures it indirectly by reading inside the callback body.
+      setRoundStartLen(libRecordsLenRef.current);
+    }
     originStart();
     isCountingRef.current = true;
   }, [originStart]);
@@ -50,7 +72,20 @@ function App() {
   const [showRecords, setShowRecords] = React.useState(false);
 
   const {
+    theme,
+    setTheme,
+    soundOn,
+    setSoundOn,
+    vibrationOn,
+    setVibrationOn,
+  } = useSettings();
+
+  const settingsRef = useRef({ soundOn, vibrationOn });
+  settingsRef.current = { soundOn, vibrationOn };
+
+  const {
     word,
+    idx,
     remaining,
     total,
     canUndo,
@@ -65,35 +100,19 @@ function App() {
 
   const [customLibInput, setCustomLibInput] = React.useState("");
   const [importMsg, setImportMsg] = React.useState("");
+  const [exportMsg, setExportMsg] = React.useState("");
 
-  const playBeep = useCallback(() => {
-    try {
-      const AudioCtx =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext?: typeof AudioContext })
-          .webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = 880;
-      gain.gain.setValueAtTime(0.25, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.8);
-    } catch {
-      // best-effort
-    }
-  }, []);
+  const libRecordsLenRef = useRef(libRecords.length);
+  libRecordsLenRef.current = libRecords.length;
 
   useEffect(() => {
     if (count === 0 && isCountingRef.current) {
       stop();
-      playBeep();
+      if (settingsRef.current.soundOn) playTimeUp();
+      if (settingsRef.current.vibrationOn) vibrate([200, 100, 200]);
+      setShowGameOver(true);
     }
-  }, [count, stop, playBeep]);
+  }, [count, stop]);
 
   useEffect(() => {
     reset();
@@ -103,6 +122,13 @@ function App() {
     (pass?: boolean) => {
       if (!word || count === 0) return;
       next(pass);
+      if (settingsRef.current.soundOn) {
+        if (pass) playCorrect();
+        else playSkip();
+      }
+      if (settingsRef.current.vibrationOn) {
+        vibrate(pass ? 30 : 20);
+      }
     },
     [word, count, next]
   );
@@ -110,6 +136,7 @@ function App() {
   const handleUndo = useCallback(() => {
     if (!canUndo) return;
     undo();
+    if (settingsRef.current.vibrationOn) vibrate(15);
   }, [canUndo, undo]);
 
   const toggleTimer = useCallback(() => {
@@ -181,7 +208,27 @@ function App() {
     if (libRecords.length === 0) return;
     if (window.confirm("确认清除所有记录吗？")) {
       clearRecords();
+      setExportMsg("");
     }
+  };
+
+  const handleExportRecords = async () => {
+    if (libRecords.length === 0) return;
+    const correct = libRecords.filter((r) => r.pass === true).length;
+    const skip = libRecords.filter((r) => r.pass === undefined).length;
+    const text = [
+      "你比我猜 · 记录",
+      `正确 ${correct} · 跳过 ${skip} · 合计 ${libRecords.length}`,
+      "",
+      ...libRecords.map((r) => `${r.pass ? "✓" : "↷"} ${r.word}`),
+    ].join("\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      setExportMsg("已复制到剪贴板");
+    } catch {
+      setExportMsg("复制失败，请手动复制");
+    }
+    window.setTimeout(() => setExportMsg(""), 2200);
   };
 
   const isRunning = isCountingRef.current;
@@ -198,6 +245,16 @@ function App() {
 
   const correctCount = libRecords.filter((r) => r.pass === true).length;
   const skipCount = libRecords.filter((r) => r.pass === undefined).length;
+
+  const roundRecords = libRecords.slice(roundStartLen);
+  const roundCorrect = roundRecords.filter((r) => r.pass === true).length;
+  const roundSkip = roundRecords.filter((r) => r.pass === undefined).length;
+
+  const themeOptions: { value: ThemeMode; label: string }[] = [
+    { value: "auto", label: "跟随系统" },
+    { value: "light", label: "浅色" },
+    { value: "dark", label: "深色" },
+  ];
 
   return (
     <div className="app">
@@ -238,6 +295,7 @@ function App() {
           remaining={remaining}
           total={total}
           status={wordStatus}
+          wordKey={idx}
         />
       </main>
 
@@ -280,6 +338,49 @@ function App() {
               size="small"
               fullWidth
               helperText={`当前 ${seconds} 秒，修改后将自动重置`}
+            />
+          </section>
+
+          <section className="drawer__section">
+            <div className="drawer__section-title">外观</div>
+            <div className="segmented" role="radiogroup" aria-label="主题">
+              {themeOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={theme === opt.value}
+                  className="segmented__item"
+                  data-active={theme === opt.value}
+                  onClick={() => setTheme(opt.value)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="drawer__section">
+            <div className="drawer__section-title">反馈</div>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={soundOn}
+                  onChange={(e) => setSoundOn(e.target.checked)}
+                  color="primary"
+                />
+              }
+              label="声音提示"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={vibrationOn}
+                  onChange={(e) => setVibrationOn(e.target.checked)}
+                  color="primary"
+                />
+              }
+              label="震动反馈"
             />
           </section>
 
@@ -359,7 +460,17 @@ function App() {
             </ul>
           )}
 
+          {exportMsg && <div className="drawer__msg">{exportMsg}</div>}
+
           <div className="drawer__actions drawer__actions--sticky">
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleExportRecords}
+              disabled={libRecords.length === 0}
+            >
+              导出
+            </Button>
             <Button
               variant="outlined"
               color="secondary"
@@ -371,6 +482,22 @@ function App() {
           </div>
         </div>
       </Drawer>
+
+      <GameOverModal
+        open={showGameOver}
+        correct={roundCorrect}
+        skip={roundSkip}
+        durationSeconds={seconds}
+        onNewRound={() => {
+          setShowGameOver(false);
+          reset();
+        }}
+        onViewRecords={() => {
+          setShowGameOver(false);
+          setShowRecords(true);
+        }}
+        onClose={() => setShowGameOver(false)}
+      />
     </div>
   );
 }
