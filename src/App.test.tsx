@@ -3,18 +3,18 @@ import ReactDOM from "react-dom";
 import { Simulate, act } from "react-dom/test-utils";
 import App from "./App";
 
-function findButton(container: HTMLElement, label: string): HTMLButtonElement {
-  const btn = Array.from(container.querySelectorAll("button")).find(
-    (b) => b.textContent?.trim() === label
-  );
-  if (!btn) throw new Error(`Button not found: ${label}`);
-  return btn as HTMLButtonElement;
+function byTestId(container: HTMLElement, id: string): HTMLElement {
+  const el = container.querySelector(`[data-testid="${id}"]`);
+  if (!el) throw new Error(`Element not found: data-testid=${id}`);
+  return el as HTMLElement;
 }
 
 function getCount(container: HTMLElement): number {
-  const span = container.querySelector(".header-count span");
-  if (!span) throw new Error("Count span not found");
-  return Number(span.textContent);
+  return Number(byTestId(container, "count").textContent);
+}
+
+function getWord(container: HTMLElement): string {
+  return byTestId(container, "word").textContent || "";
 }
 
 describe("App integration", () => {
@@ -36,7 +36,7 @@ describe("App integration", () => {
     jest.useRealTimers();
   });
 
-  test("clicking 开始 starts the countdown ticking down", () => {
+  test("clicking the timer toggles the countdown", () => {
     // eslint-disable-next-line testing-library/no-unnecessary-act
     act(() => {
       ReactDOM.render(<App />, container);
@@ -44,29 +44,28 @@ describe("App integration", () => {
 
     expect(getCount(container)).toBe(180);
 
-    const startBtn = findButton(container, "开始");
     act(() => {
-      Simulate.click(startBtn);
+      Simulate.click(byTestId(container, "timer-toggle"));
     });
 
-    // Advance 3 seconds of fake time; useInterval should tick three times.
     act(() => {
       jest.advanceTimersByTime(3000);
     });
 
-    const after = getCount(container);
-    expect(after).toBeLessThan(180);
-    expect(after).toBeGreaterThanOrEqual(176);
+    const ticked = getCount(container);
+    expect(ticked).toBeLessThan(180);
+    expect(ticked).toBeGreaterThanOrEqual(176);
   });
 
-  test("pressing 暂停 halts the countdown", () => {
+  test("pressing the timer again halts the countdown", () => {
     // eslint-disable-next-line testing-library/no-unnecessary-act
     act(() => {
       ReactDOM.render(<App />, container);
     });
 
+    const toggle = byTestId(container, "timer-toggle");
     act(() => {
-      Simulate.click(findButton(container, "开始"));
+      Simulate.click(toggle);
     });
     act(() => {
       jest.advanceTimersByTime(2000);
@@ -75,7 +74,7 @@ describe("App integration", () => {
     expect(mid).toBeLessThan(180);
 
     act(() => {
-      Simulate.click(findButton(container, "暂停"));
+      Simulate.click(byTestId(container, "timer-toggle"));
     });
     act(() => {
       jest.advanceTimersByTime(5000);
@@ -89,19 +88,58 @@ describe("App integration", () => {
       ReactDOM.render(<App />, container);
     });
 
-    const before = container.querySelector(".main span")?.textContent;
+    const before = getWord(container);
     expect(before).toBeTruthy();
 
     act(() => {
-      Simulate.click(findButton(container, "正确"));
+      Simulate.click(byTestId(container, "btn-correct"));
     });
 
-    const after = container.querySelector(".main span")?.textContent;
+    const after = getWord(container);
     expect(after).toBeTruthy();
     expect(after).not.toBe(before);
 
     const stored = JSON.parse(localStorage.getItem("LIB_RECORDS") || "[]");
     expect(stored).toHaveLength(1);
     expect(stored[0]).toEqual({ word: before, pass: true });
+  });
+
+  test("clicking 跳过 records pass=undefined", () => {
+    // eslint-disable-next-line testing-library/no-unnecessary-act
+    act(() => {
+      ReactDOM.render(<App />, container);
+    });
+
+    const before = getWord(container);
+    act(() => {
+      Simulate.click(byTestId(container, "btn-skip"));
+    });
+
+    const stored = JSON.parse(localStorage.getItem("LIB_RECORDS") || "[]");
+    expect(stored).toHaveLength(1);
+    expect(stored[0].word).toBe(before);
+    expect(stored[0].pass).toBeUndefined();
+  });
+
+  test("undo restores the previous word", () => {
+    // eslint-disable-next-line testing-library/no-unnecessary-act
+    act(() => {
+      ReactDOM.render(<App />, container);
+    });
+    const first = getWord(container);
+
+    act(() => {
+      Simulate.click(byTestId(container, "btn-correct"));
+    });
+    const second = getWord(container);
+    expect(second).not.toBe(first);
+
+    act(() => {
+      Simulate.click(byTestId(container, "btn-undo"));
+    });
+    expect(getWord(container)).toBe(first);
+
+    const stored = JSON.parse(localStorage.getItem("LIB_RECORDS") || "[]");
+    expect(stored).toHaveLength(0);
   });
 });
