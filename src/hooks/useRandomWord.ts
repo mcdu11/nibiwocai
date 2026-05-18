@@ -89,6 +89,7 @@ export function useRandomWord() {
 
   return {
     word,
+    idx,
     remaining: Math.max(0, deck.length - idx),
     total: deck.length,
     canUndo: idx > 0,

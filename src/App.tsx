@@ -67,6 +67,7 @@ function App() {
 
   const {
     word,
+    idx,
     remaining,
     total,
     canUndo,
@@ -247,6 +248,7 @@ function App() {
           remaining={remaining}
           total={total}
           status={wordStatus}
+          wordKey={idx}
         />
       </main>
 
