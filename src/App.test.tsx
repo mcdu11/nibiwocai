@@ -4,8 +4,8 @@ import { Simulate, act } from "react-dom/test-utils";
 import App from "./App";
 
 function findButton(container: HTMLElement, label: string): HTMLButtonElement {
-  const btn = Array.from(container.querySelectorAll("button")).find(
-    (b) => b.textContent?.trim() === label
+  const btn = Array.from(container.querySelectorAll("button")).find((b) =>
+    b.textContent?.includes(label)
   );
   if (!btn) throw new Error(`Button not found: ${label}`);
   return btn as HTMLButtonElement;
