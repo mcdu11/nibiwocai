@@ -1,6 +1,8 @@
 import {
   Button,
   Drawer,
+  FormControlLabel,
+  Switch,
   TextField,
   TextareaAutosize,
 } from "@material-ui/core";
@@ -10,7 +12,9 @@ import "./App.css";
 import { ActionBar } from "./components/ActionBar";
 import { TimerRing } from "./components/TimerRing";
 import { WordCard } from "./components/WordCard";
+import { playCorrect, playSkip, playTimeUp, vibrate } from "./feedback";
 import { useRandomWord } from "./hooks/useRandomWord";
+import { ThemeMode, useSettings } from "./hooks/useSettings";
 
 const MIN_SECONDS = 1;
 const MAX_SECONDS = 999;
@@ -50,6 +54,18 @@ function App() {
   const [showRecords, setShowRecords] = React.useState(false);
 
   const {
+    theme,
+    setTheme,
+    soundOn,
+    setSoundOn,
+    vibrationOn,
+    setVibrationOn,
+  } = useSettings();
+
+  const settingsRef = useRef({ soundOn, vibrationOn });
+  settingsRef.current = { soundOn, vibrationOn };
+
+  const {
     word,
     remaining,
     total,
@@ -66,34 +82,13 @@ function App() {
   const [customLibInput, setCustomLibInput] = React.useState("");
   const [importMsg, setImportMsg] = React.useState("");
 
-  const playBeep = useCallback(() => {
-    try {
-      const AudioCtx =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext?: typeof AudioContext })
-          .webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = 880;
-      gain.gain.setValueAtTime(0.25, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.8);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.8);
-    } catch {
-      // best-effort
-    }
-  }, []);
-
   useEffect(() => {
     if (count === 0 && isCountingRef.current) {
       stop();
-      playBeep();
+      if (settingsRef.current.soundOn) playTimeUp();
+      if (settingsRef.current.vibrationOn) vibrate([200, 100, 200]);
     }
-  }, [count, stop, playBeep]);
+  }, [count, stop]);
 
   useEffect(() => {
     reset();
@@ -103,6 +98,13 @@ function App() {
     (pass?: boolean) => {
       if (!word || count === 0) return;
       next(pass);
+      if (settingsRef.current.soundOn) {
+        if (pass) playCorrect();
+        else playSkip();
+      }
+      if (settingsRef.current.vibrationOn) {
+        vibrate(pass ? 30 : 20);
+      }
     },
     [word, count, next]
   );
@@ -110,6 +112,7 @@ function App() {
   const handleUndo = useCallback(() => {
     if (!canUndo) return;
     undo();
+    if (settingsRef.current.vibrationOn) vibrate(15);
   }, [canUndo, undo]);
 
   const toggleTimer = useCallback(() => {
@@ -199,6 +202,12 @@ function App() {
   const correctCount = libRecords.filter((r) => r.pass === true).length;
   const skipCount = libRecords.filter((r) => r.pass === undefined).length;
 
+  const themeOptions: { value: ThemeMode; label: string }[] = [
+    { value: "auto", label: "跟随系统" },
+    { value: "light", label: "浅色" },
+    { value: "dark", label: "深色" },
+  ];
+
   return (
     <div className="app">
       <header className="app__header">
@@ -280,6 +289,49 @@ function App() {
               size="small"
               fullWidth
               helperText={`当前 ${seconds} 秒，修改后将自动重置`}
+            />
+          </section>
+
+          <section className="drawer__section">
+            <div className="drawer__section-title">外观</div>
+            <div className="segmented" role="radiogroup" aria-label="主题">
+              {themeOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={theme === opt.value}
+                  className="segmented__item"
+                  data-active={theme === opt.value}
+                  onClick={() => setTheme(opt.value)}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="drawer__section">
+            <div className="drawer__section-title">反馈</div>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={soundOn}
+                  onChange={(e) => setSoundOn(e.target.checked)}
+                  color="primary"
+                />
+              }
+              label="声音提示"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={vibrationOn}
+                  onChange={(e) => setVibrationOn(e.target.checked)}
+                  color="primary"
+                />
+              }
+              label="震动反馈"
             />
           </section>
 
