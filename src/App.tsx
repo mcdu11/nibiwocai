@@ -100,6 +100,7 @@ function App() {
 
   const [customLibInput, setCustomLibInput] = React.useState("");
   const [importMsg, setImportMsg] = React.useState("");
+  const [exportMsg, setExportMsg] = React.useState("");
 
   const libRecordsLenRef = useRef(libRecords.length);
   libRecordsLenRef.current = libRecords.length;
@@ -207,7 +208,27 @@ function App() {
     if (libRecords.length === 0) return;
     if (window.confirm("确认清除所有记录吗？")) {
       clearRecords();
+      setExportMsg("");
     }
+  };
+
+  const handleExportRecords = async () => {
+    if (libRecords.length === 0) return;
+    const correct = libRecords.filter((r) => r.pass === true).length;
+    const skip = libRecords.filter((r) => r.pass === undefined).length;
+    const text = [
+      "你比我猜 · 记录",
+      `正确 ${correct} · 跳过 ${skip} · 合计 ${libRecords.length}`,
+      "",
+      ...libRecords.map((r) => `${r.pass ? "✓" : "↷"} ${r.word}`),
+    ].join("\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      setExportMsg("已复制到剪贴板");
+    } catch {
+      setExportMsg("复制失败，请手动复制");
+    }
+    window.setTimeout(() => setExportMsg(""), 2200);
   };
 
   const isRunning = isCountingRef.current;
@@ -439,7 +460,17 @@ function App() {
             </ul>
           )}
 
+          {exportMsg && <div className="drawer__msg">{exportMsg}</div>}
+
           <div className="drawer__actions drawer__actions--sticky">
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleExportRecords}
+              disabled={libRecords.length === 0}
+            >
+              导出
+            </Button>
             <Button
               variant="outlined"
               color="secondary"
