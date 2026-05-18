@@ -1,29 +1,19 @@
 import {
   Button,
   Drawer,
-  Grid,
-  LinearProgress,
   TextField,
   TextareaAutosize,
 } from "@material-ui/core";
-import { ArrowForward, CheckCircle, Undo } from "@material-ui/icons";
 import React, { useCallback, useEffect, useRef } from "react";
 import { useCountdown, useLocalStorage } from "usehooks-ts";
 import "./App.css";
+import { ActionBar } from "./components/ActionBar";
+import { TimerRing } from "./components/TimerRing";
+import { WordCard } from "./components/WordCard";
 import { useRandomWord } from "./hooks/useRandomWord";
 
 const MIN_SECONDS = 1;
 const MAX_SECONDS = 999;
-
-// Word card font size scales with character length and viewport (mobile-friendly).
-function fontSizeFor(len: number): string {
-  if (len <= 4) return "clamp(64px, 18vmin, 160px)";
-  if (len <= 6) return "clamp(54px, 14vmin, 130px)";
-  if (len <= 8) return "clamp(44px, 11vmin, 100px)";
-  if (len <= 12) return "clamp(34px, 9vmin, 76px)";
-  if (len <= 18) return "clamp(28px, 7vmin, 56px)";
-  return "clamp(22px, 6vmin, 42px)";
-}
 
 function App() {
   const [seconds, setSeconds] = useLocalStorage<number>(
@@ -38,10 +28,6 @@ function App() {
     });
 
   const isCountingRef = useRef(false);
-
-  // useCountdown's reset is re-created every render (no useCallback inside the
-  // library). Hide that behind a ref so our `reset` keeps a stable identity
-  // and is safe to put in effect dependency arrays.
   const originResetRef = useRef(originReset);
   originResetRef.current = originReset;
 
@@ -60,8 +46,8 @@ function App() {
     isCountingRef.current = false;
   }, []);
 
+  const [showSettings, setShowSettings] = React.useState(false);
   const [showRecords, setShowRecords] = React.useState(false);
-  const isCounting = isCountingRef.current;
 
   const {
     word,
@@ -78,7 +64,7 @@ function App() {
   } = useRandomWord();
 
   const [customLibInput, setCustomLibInput] = React.useState("");
-  const [importMsg, setImportMsg] = React.useState<string>("");
+  const [importMsg, setImportMsg] = React.useState("");
 
   const playBeep = useCallback(() => {
     try {
@@ -98,7 +84,7 @@ function App() {
       osc.start();
       osc.stop(ctx.currentTime + 0.8);
     } catch {
-      // best-effort; ignore failures (e.g. blocked autoplay)
+      // best-effort
     }
   }, []);
 
@@ -126,18 +112,22 @@ function App() {
     undo();
   }, [canUndo, undo]);
 
-  // Refs so the document-level key handler always sees the freshest closures.
+  const toggleTimer = useCallback(() => {
+    if (count === 0) return;
+    if (isCountingRef.current) stop();
+    else start();
+  }, [count, start, stop]);
+
+  // Keep latest closures in a ref so the document-level key handler stays
+  // registered once.
   const handlersRef = useRef({
-    toggleTimer: () => {},
+    toggle: () => {},
     correct: () => {},
     skip: () => {},
     undo: () => {},
     pause: () => {},
   });
-  handlersRef.current.toggleTimer = () => {
-    if (isCountingRef.current) stop();
-    else start();
-  };
+  handlersRef.current.toggle = toggleTimer;
   handlersRef.current.correct = () => handleOperate(true);
   handlersRef.current.skip = () => handleOperate(undefined);
   handlersRef.current.undo = handleUndo;
@@ -145,7 +135,6 @@ function App() {
 
   useEffect(() => {
     const onKeyUp = (e: KeyboardEvent) => {
-      // Don't hijack typing in the seconds input.
       const target = e.target as HTMLElement | null;
       if (
         target &&
@@ -154,7 +143,7 @@ function App() {
         return;
       }
       const map: Record<string, (() => void) | undefined> = {
-        " ": handlersRef.current.toggleTimer,
+        " ": handlersRef.current.toggle,
         ArrowRight: handlersRef.current.correct,
         ArrowUp: handlersRef.current.correct,
         ArrowDown: handlersRef.current.skip,
@@ -189,202 +178,195 @@ function App() {
   };
 
   const handleClearRecords = () => {
-    if (!hasRecords) return;
+    if (libRecords.length === 0) return;
     if (window.confirm("确认清除所有记录吗？")) {
       clearRecords();
     }
   };
 
-  const hasRecords = libRecords.length > 0;
-  const progress = seconds > 0 ? (count / seconds) * 100 : 0;
-  const lowTime = count > 0 && count <= Math.min(10, Math.ceil(seconds * 0.2));
+  const isRunning = isCountingRef.current;
+  const lowTime =
+    count > 0 && count <= Math.min(10, Math.ceil(seconds * 0.2));
+  const wordStatus: React.ComponentProps<typeof WordCard>["status"] =
+    !word
+      ? "exhausted"
+      : count === 0
+      ? "ended"
+      : isRunning
+      ? "running"
+      : "idle";
+
+  const correctCount = libRecords.filter((r) => r.pass === true).length;
+  const skipCount = libRecords.filter((r) => r.pass === undefined).length;
 
   return (
-    <div className="App">
-      <header className="App-header">
-        <div className="header-count">
-          <span className={lowTime ? "count-low" : ""}>{count}</span>
-          <TextField
-            id="standard-number"
-            label="设置倒计时时长"
-            type="number"
-            value={seconds}
-            onChange={(e) => {
-              const v = Number(e.target.value);
-              if (!Number.isFinite(v)) return;
-              setSeconds(
-                Math.min(MAX_SECONDS, Math.max(MIN_SECONDS, Math.floor(v)))
-              );
-            }}
-            InputLabelProps={{ shrink: true }}
-            inputProps={{ min: MIN_SECONDS, max: MAX_SECONDS }}
-          />
-        </div>
+    <div className="app">
+      <header className="app__header">
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={() => setShowSettings(true)}
+          aria-label="设置"
+        >
+          ⚙
+        </button>
+        <div className="app__title">你比我猜</div>
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={() => setShowRecords(true)}
+          aria-label="查看记录"
+        >
+          <span className="icon-btn__badge" data-testid="record-count">
+            {libRecords.length}
+          </span>
+          📋
+        </button>
+      </header>
 
-        <LinearProgress
-          className="countdown-bar"
-          variant="determinate"
-          value={progress}
-          color={lowTime ? "secondary" : "primary"}
+      <main className="app__main">
+        <TimerRing
+          count={count}
+          total={seconds}
+          lowTime={lowTime}
+          running={isRunning}
+          onToggle={toggleTimer}
         />
 
-        <div className="main">
-          <span
-            style={{
-              fontSize: word ? fontSizeFor(word.length) : "clamp(44px, 11vmin, 80px)",
-            }}
-          >
-            {word || "没有词条了"}
-          </span>
-          <div className="remaining-hint">
-            剩余词条 {remaining} / {total}
-          </div>
-          <div className="status-hint">
-            {count === 0
-              ? "时间到，请重置或调整时长后继续"
-              : isCounting
-              ? "倒计时进行中"
-              : "已暂停，点击开始继续"}
-          </div>
-        </div>
+        <WordCard
+          word={word}
+          remaining={remaining}
+          total={total}
+          status={wordStatus}
+        />
+      </main>
 
-        <Grid
-          container
-          className="operation"
-          spacing={2}
-          justifyContent="center"
-          style={{ flexGrow: 0, width: "100%", margin: 0 }}
-        >
-          <Grid item xs={12} sm={5}>
-            <div className="timer-ctrl">
+      <ActionBar
+        canAct={!!word && count > 0}
+        canUndo={canUndo}
+        onCorrect={() => handleOperate(true)}
+        onSkip={() => handleOperate(undefined)}
+        onUndo={handleUndo}
+      />
+
+      <div className="app__shortcuts" aria-hidden>
+        空格 开始/暂停 · → 正确 · ↓ 跳过 · ← 撤销 · Esc 暂停
+      </div>
+
+      <Drawer
+        anchor="right"
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+        PaperProps={{ className: "drawer-paper" }}
+      >
+        <div className="drawer">
+          <div className="drawer__title">设置</div>
+
+          <section className="drawer__section">
+            <div className="drawer__section-title">倒计时时长</div>
+            <TextField
+              type="number"
+              value={seconds}
+              onChange={(e) => {
+                const v = Number(e.target.value);
+                if (!Number.isFinite(v)) return;
+                setSeconds(
+                  Math.min(MAX_SECONDS, Math.max(MIN_SECONDS, Math.floor(v)))
+                );
+              }}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ min: MIN_SECONDS, max: MAX_SECONDS }}
+              variant="outlined"
+              size="small"
+              fullWidth
+              helperText={`当前 ${seconds} 秒，修改后将自动重置`}
+            />
+          </section>
+
+          <section className="drawer__section">
+            <div className="drawer__section-title">
+              词库
+              <span className="drawer__chip">
+                {isCustomLib ? "自定义" : "默认"} · {total} 词
+              </span>
+            </div>
+            <TextareaAutosize
+              minRows={4}
+              placeholder="粘贴自定义词库：每行一个，或用逗号 / 空格分隔"
+              value={customLibInput}
+              onChange={(e) => setCustomLibInput(e.target.value)}
+              className="drawer__textarea"
+            />
+            {importMsg && <div className="drawer__msg">{importMsg}</div>}
+            <div className="drawer__actions">
               <Button
-                size="large"
                 variant="contained"
                 color="primary"
-                onClick={isCounting ? stop : start}
+                onClick={handleApplyCustomLib}
+                disabled={!customLibInput.trim()}
               >
-                {isCounting ? "暂停" : "开始"}
+                应用自定义
               </Button>
-              <Button size="large" variant="contained" onClick={reset}>
-                重置
+              <Button variant="outlined" onClick={recoverLib}>
+                恢复默认
               </Button>
             </div>
-          </Grid>
-          <Grid item xs={12} sm={5}>
-            <div className="word-ctrl">
-              <Button
-                size="large"
-                variant="contained"
-                color="primary"
-                onClick={() => handleOperate(true)}
-                disabled={!word || count === 0}
-              >
-                正确（→）
-              </Button>
-              <Button
-                size="large"
-                variant="contained"
-                onClick={() => handleOperate(undefined)}
-                disabled={!word || count === 0}
-              >
-                跳过（↓）
-              </Button>
-              <Button
-                size="large"
-                variant="contained"
-                startIcon={<Undo />}
-                onClick={handleUndo}
-                disabled={!canUndo}
-              >
-                撤销（←）
-              </Button>
-              <Button
-                size="large"
-                variant="contained"
-                onClick={() => setShowRecords(true)}
-              >
-                查看记录
-              </Button>
-            </div>
-          </Grid>
-        </Grid>
-
-        <div className="shortcut-hint">
-          快捷键：空格 开始/暂停 · → 正确 · ↓ 跳过 · ← 撤销 · Esc 暂停
+          </section>
         </div>
-      </header>
+      </Drawer>
+
       <Drawer
         anchor="right"
         open={showRecords}
         onClose={() => setShowRecords(false)}
+        PaperProps={{ className: "drawer-paper" }}
       >
-        {hasRecords ? (
-          <>
-            <div style={{ marginLeft: 20 }}>
-              <div>
-                正确：{libRecords.filter((item) => item.pass === true).length}
-              </div>
-              <div>
-                跳过：
-                {libRecords.filter((item) => item.pass === undefined).length}
-              </div>
+        <div className="drawer">
+          <div className="drawer__title">本局记录</div>
+
+          <div className="stats">
+            <div className="stats__card stats__card--correct">
+              <div className="stats__num">{correctCount}</div>
+              <div className="stats__label">正确</div>
             </div>
-            {libRecords.map((record, idx) => (
-              <div
-                key={idx}
-                style={{
-                  width: 250,
-                  padding: "10px 20px",
-                  display: "flex",
-                  alignItems: "center",
-                }}
-              >
-                <span style={{ display: "inline-block", width: "150px" }}>
-                  {record.word}:
-                </span>
-                {record.pass ? (
-                  <CheckCircle color="primary" />
-                ) : (
-                  <ArrowForward color="primary" />
-                )}
-              </div>
-            ))}
+            <div className="stats__card stats__card--skip">
+              <div className="stats__num">{skipCount}</div>
+              <div className="stats__label">跳过</div>
+            </div>
+            <div className="stats__card">
+              <div className="stats__num">{libRecords.length}</div>
+              <div className="stats__label">合计</div>
+            </div>
+          </div>
+
+          {libRecords.length === 0 ? (
+            <div className="drawer__empty">暂无记录</div>
+          ) : (
+            <ul className="record-list">
+              {libRecords.map((record, idx) => (
+                <li
+                  key={idx}
+                  className={`record-list__item record-list__item--${
+                    record.pass ? "correct" : "skip"
+                  }`}
+                >
+                  <span className="record-list__word">{record.word}</span>
+                  <span className="record-list__tag">
+                    {record.pass ? "✓ 正确" : "↷ 跳过"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <div className="drawer__actions drawer__actions--sticky">
             <Button
-              size="large"
-              variant="contained"
+              variant="outlined"
               color="secondary"
-              style={{ width: "50%", marginLeft: 20 }}
               onClick={handleClearRecords}
+              disabled={libRecords.length === 0}
             >
               清除记录
-            </Button>
-          </>
-        ) : (
-          <div style={{ width: 250, padding: "20px" }}>暂无记录</div>
-        )}
-        <div className="lib-import">
-          <div className="lib-import-title">
-            词库 · 当前：{isCustomLib ? "自定义" : "默认"}（共 {total} 词）
-          </div>
-          <TextareaAutosize
-            minRows={4}
-            placeholder="粘贴自定义词库：每行一个，或用逗号 / 空格分隔"
-            value={customLibInput}
-            onChange={(e) => setCustomLibInput(e.target.value)}
-            className="lib-import-textarea"
-          />
-          {importMsg && <div className="lib-import-msg">{importMsg}</div>}
-          <div className="lib-import-actions">
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleApplyCustomLib}
-              disabled={!customLibInput.trim()}
-            >
-              应用自定义
-            </Button>
-            <Button variant="contained" onClick={recoverLib}>
-              恢复默认词库
             </Button>
           </div>
         </div>
