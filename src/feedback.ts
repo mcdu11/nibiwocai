@@ -54,6 +54,10 @@ export function playSkip(): void {
   tone(520, 120, { gain: 0.18 });
 }
 
+export function playUndo(): void {
+  tone(660, 90, { gain: 0.15 });
+}
+
 export function playTimeUp(): void {
   tone(880, 250);
   tone(660, 250, { delayMs: 180 });

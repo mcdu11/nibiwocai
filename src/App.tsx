@@ -13,12 +13,19 @@ import { ActionBar } from "./components/ActionBar";
 import { GameOverModal } from "./components/GameOverModal";
 import { TimerRing } from "./components/TimerRing";
 import { WordCard } from "./components/WordCard";
-import { playCorrect, playSkip, playTimeUp, vibrate } from "./feedback";
+import {
+  playCorrect,
+  playSkip,
+  playTimeUp,
+  playUndo,
+  vibrate,
+} from "./feedback";
 import { useRandomWord } from "./hooks/useRandomWord";
 import { ThemeMode, useSettings } from "./hooks/useSettings";
 
 const MIN_SECONDS = 1;
 const MAX_SECONDS = 999;
+const SECONDS_PRESETS = [60, 120, 180, 300];
 
 function App() {
   const [seconds, setSeconds] = useLocalStorage<number>(
@@ -136,6 +143,7 @@ function App() {
   const handleUndo = useCallback(() => {
     if (!canUndo) return;
     undo();
+    if (settingsRef.current.soundOn) playUndo();
     if (settingsRef.current.vibrationOn) vibrate(15);
   }, [canUndo, undo]);
 
@@ -144,6 +152,14 @@ function App() {
     if (isCountingRef.current) stop();
     else start();
   }, [count, start, stop]);
+
+  const endRoundEarly = useCallback(() => {
+    // Only when actually mid-round: timer not at full, not at zero.
+    if (countRef.current >= secondsRef.current || countRef.current === 0) return;
+    stop();
+    if (settingsRef.current.vibrationOn) vibrate(40);
+    setShowGameOver(true);
+  }, [stop]);
 
   // Keep latest closures in a ref so the document-level key handler stays
   // registered once.
@@ -307,6 +323,17 @@ function App() {
         onUndo={handleUndo}
       />
 
+      {count < seconds && count > 0 && (
+        <button
+          type="button"
+          className="end-round"
+          onClick={endRoundEarly}
+          data-testid="end-round"
+        >
+          提前结束本轮 →
+        </button>
+      )}
+
       <div className="app__shortcuts" aria-hidden>
         空格 开始/暂停 · → 正确 · ↓ 跳过 · ← 撤销 · Esc 暂停
       </div>
@@ -322,6 +349,19 @@ function App() {
 
           <section className="drawer__section">
             <div className="drawer__section-title">倒计时时长</div>
+            <div className="time-presets" role="group" aria-label="时长预设">
+              {SECONDS_PRESETS.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  className="time-preset"
+                  data-active={seconds === s}
+                  onClick={() => setSeconds(s)}
+                >
+                  {s < 60 ? `${s} 秒` : `${s / 60} 分`}
+                </button>
+              ))}
+            </div>
             <TextField
               type="number"
               value={seconds}
