@@ -53,6 +53,8 @@ export function WordCard({
         key={animKey}
         className={`word-card__word word-card__word--${direction}`}
         data-testid="word"
+        aria-live="polite"
+        aria-atomic="true"
         style={{
           fontSize: word ? fontSizeFor(word.length) : "clamp(36px, 9vmin, 64px)",
         }}

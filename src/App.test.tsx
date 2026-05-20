@@ -121,6 +121,32 @@ describe("App integration", () => {
     expect(stored[0].pass).toBeUndefined();
   });
 
+  test("提前结束本轮 button opens the game-over modal mid-round", () => {
+    // eslint-disable-next-line testing-library/no-unnecessary-act
+    act(() => {
+      ReactDOM.render(<App />, container);
+    });
+
+    // The button should not be visible before a round starts.
+    expect(container.querySelector('[data-testid="end-round"]')).toBeNull();
+
+    act(() => {
+      Simulate.click(byTestId(container, "timer-toggle"));
+    });
+    act(() => {
+      jest.advanceTimersByTime(5000);
+    });
+
+    const endBtn = byTestId(container, "end-round");
+    act(() => {
+      Simulate.click(endBtn);
+    });
+
+    expect(
+      container.querySelector('[data-testid="game-over"]')
+    ).not.toBeNull();
+  });
+
   test("game-over modal appears when the timer runs out", () => {
     // eslint-disable-next-line testing-library/no-unnecessary-act
     act(() => {

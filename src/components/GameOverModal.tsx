@@ -45,7 +45,7 @@ export function GameOverModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div id="game-over-title" className="game-over__title">
-          时间到！
+          本轮结束
         </div>
         <div className="game-over__stats">
           <div className="game-over__stat">
